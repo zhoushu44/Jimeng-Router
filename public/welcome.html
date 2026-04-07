@@ -1,0 +1,1781 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Jimeng Console</title>
+  <style>
+    :root {
+      --bg: #0c1016;
+      --bg-soft: #131923;
+      --panel: rgba(16, 22, 31, 0.88);
+      --panel-strong: rgba(10, 14, 21, 0.94);
+      --line: rgba(166, 190, 255, 0.14);
+      --line-strong: rgba(166, 190, 255, 0.28);
+      --text: #edf3ff;
+      --muted: #91a1bd;
+      --accent: #79a8ff;
+      --accent-2: #61f0d2;
+      --accent-3: #ffc670;
+      --danger: #ff7d93;
+      --success: #7df0a5;
+      --shadow: 0 20px 80px rgba(0, 0, 0, 0.45);
+      --radius-xl: 26px;
+      --radius-lg: 18px;
+      --radius-md: 14px;
+      --radius-sm: 10px;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(121,168,255,0.18), transparent 34%),
+        radial-gradient(circle at 80% 12%, rgba(97,240,210,0.12), transparent 24%),
+        radial-gradient(circle at bottom right, rgba(255,198,112,0.10), transparent 28%),
+        linear-gradient(180deg, #0c1016 0%, #090c12 100%);
+      font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      letter-spacing: 0.01em;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+      background-size: 30px 30px;
+      mask-image: radial-gradient(circle at center, black 45%, transparent 90%);
+      opacity: 0.45;
+    }
+
+    .shell {
+      width: min(1400px, calc(100vw - 32px));
+      margin: 24px auto 40px;
+    }
+
+    .hero {
+      position: relative;
+      padding: 28px;
+      border: 1px solid var(--line);
+      background: linear-gradient(180deg, rgba(18,25,35,0.9), rgba(11,15,22,0.9));
+      box-shadow: var(--shadow);
+      border-radius: 30px;
+      overflow: hidden;
+    }
+
+    .hero::after {
+      content: "";
+      position: absolute;
+      inset: auto -10% -45% 30%;
+      height: 260px;
+      background: radial-gradient(circle, rgba(121,168,255,0.18), transparent 70%);
+      filter: blur(10px);
+      pointer-events: none;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 14px;
+      border-radius: 999px;
+      border: 1px solid var(--line-strong);
+      background: rgba(255,255,255,0.04);
+      color: var(--accent-2);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+    }
+
+    .eyebrow::before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent-2);
+      box-shadow: 0 0 16px rgba(97, 240, 210, 0.9);
+    }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: 1.25fr 0.75fr;
+      gap: 20px;
+      margin-top: 18px;
+      align-items: end;
+    }
+
+    .hero h1 {
+      margin: 16px 0 12px;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: clamp(40px, 6vw, 76px);
+      line-height: 0.95;
+      letter-spacing: -0.04em;
+      font-weight: 700;
+    }
+
+    .hero p {
+      max-width: 760px;
+      margin: 0;
+      color: #c3d0e8;
+      line-height: 1.75;
+      font-size: 15px;
+    }
+
+    .headline-note {
+      margin-top: 18px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 13px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.04);
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .hero-stats {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .stat {
+      padding: 16px;
+      min-height: 108px;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--line);
+      background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
+      backdrop-filter: blur(12px);
+    }
+
+    .stat-label {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      color: var(--muted);
+    }
+
+    .stat-value {
+      margin-top: 8px;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 34px;
+      line-height: 1;
+    }
+
+    .stat-sub {
+      margin-top: 10px;
+      color: #b0bfd9;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin: 18px 0 0;
+      padding: 8px;
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      background: rgba(255,255,255,0.03);
+      backdrop-filter: blur(12px);
+    }
+
+    .tab {
+      border: 0;
+      cursor: pointer;
+      color: var(--muted);
+      background: transparent;
+      padding: 12px 16px;
+      border-radius: 14px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      transition: 0.22s ease;
+    }
+
+    .tab:hover { color: var(--text); background: rgba(255,255,255,0.05); }
+    .tab.active {
+      color: #091018;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      box-shadow: 0 8px 30px rgba(121,168,255,0.3);
+    }
+
+    .panel {
+      display: none;
+      margin-top: 18px;
+      animation: rise 0.28s ease;
+    }
+    .panel.active { display: block; }
+
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .grid {
+      display: grid;
+      gap: 18px;
+    }
+
+    .grid.two {
+      grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+    }
+
+    .card {
+      position: relative;
+      padding: 22px;
+      border-radius: var(--radius-xl);
+      border: 1px solid var(--line);
+      background: linear-gradient(180deg, var(--panel), var(--panel-strong));
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .card::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 22px;
+      width: 120px;
+      height: 1px;
+      background: linear-gradient(90deg, var(--accent), transparent);
+      opacity: 0.8;
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+
+    .card-title {
+      margin: 0;
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .card-desc {
+      margin: 8px 0 0;
+      color: var(--muted);
+      line-height: 1.7;
+      font-size: 14px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      color: var(--muted);
+      font-size: 12px;
+      white-space: nowrap;
+      background: rgba(255,255,255,0.04);
+    }
+
+    .form-grid {
+      display: grid;
+      gap: 14px;
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+    }
+
+    .field {
+      grid-column: span 12;
+    }
+
+    .field.span-6 { grid-column: span 6; }
+    .field.span-4 { grid-column: span 4; }
+    .field.span-3 { grid-column: span 3; }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      color: #dce7f9;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      border: 1px solid rgba(182, 201, 255, 0.14);
+      background: rgba(255,255,255,0.045);
+      color: var(--text);
+      border-radius: 14px;
+      padding: 13px 14px;
+      font: inherit;
+      transition: border-color 0.2s ease, transform 0.2s ease, background 0.2s ease;
+    }
+
+    #modelFilterCategory,
+    #modelFilterCategory option,
+    #modelCategory,
+    #modelCategory option,
+    #exampleCategory,
+    #exampleCategory option {
+      color: #EDF3FF;
+      background: #0f1726;
+    }
+
+    textarea { min-height: 126px; resize: vertical; line-height: 1.6; }
+    input::placeholder, textarea::placeholder { color: #7f8da7; }
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: rgba(121,168,255,0.6);
+      background: rgba(255,255,255,0.06);
+      transform: translateY(-1px);
+    }
+
+    .hint {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.6;
+    }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-top: 16px;
+    }
+
+    button, .button-link {
+      appearance: none;
+      border: 0;
+      cursor: pointer;
+      font: inherit;
+    }
+
+    .btn {
+      border-radius: 999px;
+      padding: 12px 18px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
+    }
+
+    .btn:hover { transform: translateY(-1px); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    .btn-primary {
+      color: #081018;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      box-shadow: 0 12px 30px rgba(97,240,210,0.16);
+    }
+
+    .btn-secondary {
+      color: var(--text);
+      background: rgba(255,255,255,0.06);
+      border: 1px solid var(--line);
+    }
+
+    .btn-danger {
+      color: #fff;
+      background: linear-gradient(135deg, #ff7d93, #ff9670);
+    }
+
+    .table-list, .media-grid, .example-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .stack {
+      display: grid;
+      gap: 18px;
+    }
+
+    .session-item, .model-group, .result-item, .example-item {
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: rgba(255,255,255,0.035);
+    }
+
+    .session-item {
+      display: flex;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 18px;
+      align-items: flex-start;
+    }
+
+    .session-name {
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    .session-meta, .model-meta, .result-meta {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.7;
+      word-break: break-word;
+    }
+
+    .mini-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .mini-tag {
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.04);
+      color: var(--text);
+    }
+
+    .mini-tag.good { color: var(--success); }
+    .mini-tag.bad { color: var(--danger); }
+    .mini-tag.warn { color: var(--accent-3); }
+
+    .empty {
+      padding: 26px;
+      border-radius: 18px;
+      text-align: center;
+      color: var(--muted);
+      border: 1px dashed var(--line-strong);
+      background: rgba(255,255,255,0.025);
+      line-height: 1.8;
+    }
+
+    .split {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 18px;
+    }
+
+    .model-group {
+      overflow: hidden;
+    }
+
+    .model-filter {
+      margin-bottom: 16px;
+      display: grid;
+      grid-template-columns: minmax(0, 260px);
+      gap: 12px;
+    }
+
+    .model-toolbar {
+      display: grid;
+      grid-template-columns: minmax(0, 260px) 1fr;
+      gap: 14px;
+      align-items: end;
+      margin-bottom: 16px;
+    }
+
+    .toolbar-note {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.7;
+    }
+
+    .model-group-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 16px 18px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(255,255,255,0.03);
+    }
+
+    .model-items {
+      padding: 8px 10px 10px;
+    }
+
+    .model-item {
+      padding: 12px;
+      border-radius: 14px;
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: flex-start;
+    }
+
+    .model-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .btn-mini {
+      padding: 8px 12px;
+      font-size: 12px;
+    }
+
+    .inline-note {
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.6;
+    }
+
+    .model-item + .model-item {
+      border-top: 1px solid rgba(166,190,255,0.08);
+    }
+
+    .model-title {
+      font-weight: 700;
+      font-size: 15px;
+    }
+
+    .model-id {
+      margin-top: 6px;
+      font-size: 12px;
+      color: #9eb0cf;
+      word-break: break-all;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      height: fit-content;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(121,168,255,0.12);
+      border: 1px solid rgba(121,168,255,0.16);
+      color: var(--accent);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .result-item {
+      padding: 14px;
+    }
+
+    .result-media {
+      width: 100%;
+      border-radius: 14px;
+      margin-top: 12px;
+      background: #000;
+      overflow: hidden;
+      border: 1px solid var(--line);
+    }
+
+    .result-media img, .result-media video {
+      display: block;
+      width: 100%;
+      max-height: 420px;
+      object-fit: contain;
+      background: #05070b;
+    }
+
+    .code-wrap {
+      margin-top: 12px;
+      padding: 14px;
+      border-radius: 16px;
+      background: #091018;
+      border: 1px solid rgba(166,190,255,0.10);
+      overflow: auto;
+    }
+
+    pre {
+      margin: 0;
+      font-family: Consolas, "SFMono-Regular", monospace;
+      font-size: 12px;
+      line-height: 1.65;
+      color: #d8e4fa;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .example-item {
+      padding: 18px;
+    }
+
+    .example-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .example-title {
+      font-weight: 700;
+      font-size: 16px;
+    }
+
+    .example-desc {
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.7;
+    }
+
+    .example-tabs {
+      display: flex;
+      gap: 8px;
+      margin: 12px 0 10px;
+    }
+
+    .subtab {
+      padding: 8px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.04);
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .example-toolbar {
+      display: grid;
+      grid-template-columns: minmax(0, 260px) 1fr;
+      gap: 14px;
+      align-items: end;
+      margin-bottom: 16px;
+    }
+
+    .example-meta-note {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.7;
+    }
+
+    .example-config {
+      display: grid;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .example-label {
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .toast {
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      max-width: min(420px, calc(100vw - 36px));
+      padding: 14px 16px;
+      border-radius: 16px;
+      border: 1px solid var(--line);
+      background: rgba(7,10,15,0.94);
+      box-shadow: var(--shadow);
+      transform: translateY(24px);
+      opacity: 0;
+      pointer-events: none;
+      transition: 0.22s ease;
+      z-index: 50;
+      line-height: 1.6;
+      color: var(--text);
+    }
+
+    .toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    .loading::after {
+      content: " ···";
+      animation: blink 1s infinite steps(3);
+    }
+
+    @keyframes blink {
+      0% { opacity: 0.35; }
+      50% { opacity: 1; }
+      100% { opacity: 0.35; }
+    }
+
+    @media (max-width: 1100px) {
+      .hero-grid, .grid.two, .split, .example-toolbar, .model-toolbar { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 720px) {
+      .shell { width: min(100vw - 18px, 1400px); margin-top: 10px; }
+      .hero, .card { padding: 18px; border-radius: 22px; }
+      .tabs { border-radius: 18px; }
+      .tab { width: 100%; text-align: left; }
+      .field.span-6, .field.span-4, .field.span-3 { grid-column: span 12; }
+      .session-item { flex-direction: column; }
+      .hero-stats { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <section class="hero">
+      <div class="eyebrow">Jimeng Dashboard</div>
+      <div class="hero-grid">
+        <div>
+          <h1>Session 驱动的<br />即梦控制台</h1>
+          <div class="headline-note">
+            <span class="chip">多 sessionid 轮换</span>
+            <span class="chip">服务端持久化</span>
+            <span class="chip">文生图 / 图生图 / 视频</span>
+            <span class="chip">OpenAI 兼容接口不变</span>
+          </div>
+        </div>
+        <div class="hero-stats">
+          <div class="stat">
+            <div class="stat-label">Session 库</div>
+            <div class="stat-value" id="statSessions">0</div>
+            <div class="stat-sub" id="statSessionsSub">还没有保存 sessionid</div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">模型清单</div>
+            <div class="stat-value" id="statModels">0</div>
+            <div class="stat-sub">来自当前服务端模型管理配置</div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">服务状态</div>
+            <div class="stat-value">RUN</div>
+            <div class="stat-sub">首页已由静态欢迎页切换为控制台入口</div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">接口基址</div>
+            <div class="stat-value" style="font-size:22px">/v1</div>
+            <div class="stat-sub">控制台代理：/api/generate/*</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <nav class="tabs" id="tabs">
+      <button class="tab active" data-tab="sessions">Session 管理</button>
+      <button class="tab" data-tab="models">模型管理</button>
+      <button class="tab" data-tab="images">图片生成</button>
+      <button class="tab" data-tab="videos">视频生成</button>
+      <button class="tab" data-tab="examples">调用说明</button>
+    </nav>
+
+    <section class="panel active" id="panel-sessions">
+      <div class="grid two">
+        <article class="card">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">添加 Session</h2>
+              <p class="card-desc">把 sessionid 持久化到服务端。控制台生成时会自动从已保存的 session 中拼接 Authorization 并复用现有轮换逻辑。</p>
+            </div>
+            <div class="badge">POST /api/sessions</div>
+          </div>
+          <form id="sessionForm">
+            <div class="form-grid">
+              <div class="field span-6">
+                <label for="sessionName">名称</label>
+                <input id="sessionName" name="name" placeholder="例如：主账号 / 备用账号" />
+              </div>
+              <div class="field span-6">
+                <label for="sessionNote">备注</label>
+                <input id="sessionNote" name="note" placeholder="可选，记录来源或用途" />
+              </div>
+              <div class="field">
+                <label for="sessionValue">sessionid</label>
+                <textarea id="sessionValue" name="value" placeholder="支持直接粘贴 sessionid，也可粘贴 Bearer xxx，服务端会自动规范化。" required></textarea>
+                <div class="hint">保存后列表中只显示掩码值，真实值仅保留在服务端 data/sessions.json。</div>
+              </div>
+            </div>
+            <div class="actions">
+              <button class="btn btn-primary" type="submit" id="sessionSubmit">保存 Session</button>
+              <button class="btn btn-secondary" type="button" id="sessionRefresh">刷新列表</button>
+              <button class="btn btn-secondary" type="button" id="copyApiKey">复制 API KEY</button>
+            </div>
+          </form>
+        </article>
+
+        <article class="card">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">Session 列表</h2>
+              <p class="card-desc">每条记录会尝试展示有效性与积分摘要。若查询失败，会保留为空而不阻断页面。</p>
+            </div>
+            <div class="badge" id="sessionCountBadge">0 条记录</div>
+          </div>
+          <div class="notice" id="sessionApiKeyHint">复制出来的 API KEY 就是多个 sessionid 的逗号拼接结果，可直接填进 OpenAI 兼容客户端的 API KEY。</div>
+          <div id="sessionList" class="table-list">
+            <div class="empty">还没有 sessionid。<br />先在左侧添加一条，再使用图片或视频生成表单。</div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-models">
+      <div class="stack">
+        <article class="card">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">添加模型</h2>
+              <p class="card-desc">模型管理会持久化到服务端，并同步影响 /v1/models 返回与控制台下拉。顺序 = 优先级。</p>
+            </div>
+            <div class="badge">POST /api/models</div>
+          </div>
+          <form id="modelForm">
+            <div class="form-grid">
+              <div class="field span-6">
+                <label for="modelName">模型名称</label>
+                <input id="modelName" name="name" placeholder="例如：jimeng-5.0" required />
+              </div>
+              <div class="field span-6">
+                <label for="modelCategory">分类</label>
+                <select id="modelCategory" name="category">
+                  <option value="image">image</option>
+                  <option value="video">video</option>
+                  <option value="seedance">seedance</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="modelId">实际模型 ID</label>
+                <input id="modelId" name="model_id" placeholder="例如：jimeng-video-3.5-pro" required />
+                <div class="hint">会作为 /v1/models 的 id 返回，也会用于图片/视频表单下拉。</div>
+              </div>
+              <div class="field">
+                <label for="modelDescription">说明</label>
+                <textarea id="modelDescription" name="description" placeholder="可选，补充模型用途、兼容别名或优先级说明"></textarea>
+              </div>
+            </div>
+            <div class="actions">
+              <button class="btn btn-primary" type="submit" id="modelSubmit">添加模型</button>
+              <button class="btn btn-secondary" type="button" id="modelRefresh">刷新模型</button>
+            </div>
+          </form>
+        </article>
+
+        <article class="card">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">模型优先级</h2>
+              <p class="card-desc">按图片、视频、Seedance / 国际兼容三个分类管理。分类内的显示顺序就是控制台优先级。</p>
+            </div>
+            <div class="badge" id="modelCountBadge">0 个模型</div>
+          </div>
+          <div class="notice">删除的是当前服务配置，不会直接移除底层控制器能力；如果控制器仍支持某个 model_id，外部请求硬传时仍可能可用。</div>
+          <div class="model-toolbar">
+            <div class="field" style="margin:0">
+              <label for="modelFilterCategory">查看分类</label>
+              <select id="modelFilterCategory">
+                <option value="all">全部分类</option>
+              </select>
+            </div>
+            <div class="toolbar-note">参考 ModelScopeApiRouter 的纵向排布：先筛选分类，再按分类内顺序管理模型，顺序越靠前优先级越高。</div>
+          </div>
+          <div class="split" id="modelGroups">
+            <div class="empty">正在加载模型列表。</div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-images">
+      <div class="grid two">
+        <article class="card">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">图片生成</h2>
+              <p class="card-desc">无 images 时走文生图；填写 URL 数组或上传文件时自动走图生图。控制台会请求 /api/generate/image，并由后端注入已保存的 sessionid。</p>
+            </div>
+            <div class="badge">POST /api/generate/image</div>
+          </div>
+          <form id="imageForm">
+            <div class="form-grid">
+              <div class="field span-4">
+                <label for="imageModel">模型</label>
+                <select id="imageModel" name="model">
+                  <option value="jimeng-5.0">jimeng-5.0</option>
+                  <option value="jimeng-4.6">jimeng-4.6</option>
+                  <option value="jimeng-4.5">jimeng-4.5</option>
+                  <option value="jimeng-4.1">jimeng-4.1</option>
+                </select>
+              </div>
+              <div class="field span-4">
+                <label for="imageRatio">比例</label>
+                <select id="imageRatio" name="ratio">
+                  <option value="1:1">1:1</option>
+                  <option value="16:9">16:9</option>
+                  <option value="9:16">9:16</option>
+                  <option value="4:3">4:3</option>
+                  <option value="3:4">3:4</option>
+                  <option value="3:2">3:2</option>
+                  <option value="2:3">2:3</option>
+                  <option value="21:9">21:9</option>
+                </select>
+              </div>
+              <div class="field span-4">
+                <label for="imageResolution">分辨率</label>
+                <select id="imageResolution" name="resolution">
+                  <option value="2k">2k</option>
+                  <option value="1k">1k</option>
+                  <option value="4k">4k</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="imagePrompt">提示词</label>
+                <textarea id="imagePrompt" name="prompt" placeholder="例如：霓虹雨夜中的未来城市，电影海报质感，超清细节" required></textarea>
+              </div>
+              <div class="field">
+                <label for="imageNegativePrompt">反向提示词</label>
+                <textarea id="imageNegativePrompt" name="negative_prompt" placeholder="可选"></textarea>
+              </div>
+              <div class="field span-6">
+                <label for="imageStrength">sample_strength</label>
+                <input id="imageStrength" name="sample_strength" type="number" min="0" max="1" step="0.01" value="0.55" />
+              </div>
+              <div class="field span-6">
+                <label for="imageResponseFormat">response_format</label>
+                <select id="imageResponseFormat" name="response_format">
+                  <option value="url">url</option>
+                  <option value="b64_json">b64_json</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="imageUrls">图生图 URL 数组</label>
+                <textarea id="imageUrls" placeholder="每行一个图片 URL。留空则默认文生图。"></textarea>
+                <div class="hint">如果同时上传文件，则优先按 multipart 图生图请求发送。</div>
+              </div>
+              <div class="field">
+                <label for="imageFiles">图生图上传文件</label>
+                <input id="imageFiles" type="file" accept="image/*" multiple />
+              </div>
+            </div>
+            <div class="actions">
+              <button class="btn btn-primary" type="submit" id="imageSubmit">生成图片</button>
+              <button class="btn btn-secondary" type="button" id="imageReset">清空表单</button>
+            </div>
+          </form>
+        </article>
+
+        <article class="card">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">图片结果</h2>
+              <p class="card-desc">展示返回的图片 URL 或 b64_json 摘要。URL 结果会直接渲染预览与下载入口。</p>
+            </div>
+            <div class="badge" id="imageResultBadge">等待请求</div>
+          </div>
+          <div id="imageResult" class="media-grid">
+            <div class="empty">先添加 session，再提交一次图片生成请求。</div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-videos">
+      <div class="grid two">
+        <article class="card">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">视频生成</h2>
+              <p class="card-desc">第一版主流程接 /api/generate/video。普通视频支持 5 / 10 秒；Seedance 支持 4-15 秒，并建议配合素材使用。</p>
+            </div>
+            <div class="badge">POST /api/generate/video</div>
+          </div>
+          <form id="videoForm">
+            <div class="form-grid">
+              <div class="field span-4">
+                <label for="videoModel">模型</label>
+                <select id="videoModel" name="model">
+                  <option value="jimeng-video-3.5-pro">jimeng-video-3.5-pro</option>
+                  <option value="jimeng-video-3.0">jimeng-video-3.0</option>
+                  <option value="jimeng-video-3.0-pro">jimeng-video-3.0-pro</option>
+                  <option value="jimeng-video-seedance-2.0">jimeng-video-seedance-2.0</option>
+                  <option value="jimeng-video-seedance-2.0-fast">jimeng-video-seedance-2.0-fast</option>
+                  <option value="jimeng-video-seedance-2.0-fast-vip">jimeng-video-seedance-2.0-fast-vip</option>
+                  <option value="jimeng-video-seedance-2.0-vip">jimeng-video-seedance-2.0-vip</option>
+                </select>
+              </div>
+              <div class="field span-4">
+                <label for="videoRatio">比例</label>
+                <select id="videoRatio" name="ratio">
+                  <option value="1:1">1:1</option>
+                  <option value="16:9">16:9</option>
+                  <option value="9:16">9:16</option>
+                  <option value="4:3">4:3</option>
+                  <option value="3:4">3:4</option>
+                </select>
+              </div>
+              <div class="field span-4">
+                <label for="videoResolution">分辨率</label>
+                <select id="videoResolution" name="resolution">
+                  <option value="720p">720p</option>
+                  <option value="480p">480p</option>
+                  <option value="1080p">1080p</option>
+                </select>
+              </div>
+              <div class="field span-4">
+                <label for="videoDuration">时长</label>
+                <input id="videoDuration" name="duration" type="number" min="4" max="15" value="5" />
+              </div>
+              <div class="field span-8">
+                <label for="videoFilePaths">file_paths / filePaths</label>
+                <input id="videoFilePaths" placeholder="可选，使用英文逗号分隔首帧 / 尾帧 URL" />
+              </div>
+              <div class="field">
+                <label for="videoPrompt">提示词</label>
+                <textarea id="videoPrompt" name="prompt" placeholder="例如：海边奔跑的白色小狗，电影镜头，自然光，流畅运动"></textarea>
+                <div class="hint" id="videoHint">当前模型为普通视频模型，duration 建议填写 5 或 10。</div>
+              </div>
+              <div class="field span-6">
+                <label for="videoResponseFormat">response_format</label>
+                <select id="videoResponseFormat" name="response_format">
+                  <option value="url">url</option>
+                  <option value="b64_json">b64_json</option>
+                </select>
+              </div>
+              <div class="field span-6">
+                <label for="videoFiles">上传素材（可选）</label>
+                <input id="videoFiles" type="file" multiple accept="image/*,video/*,audio/*" />
+              </div>
+            </div>
+            <div class="notice">Seedance 模型建议至少配合一个素材文件；国际版同步 / 异步接口先保留在“调用说明”里，不塞进第一版主表单。</div>
+            <div class="actions">
+              <button class="btn btn-primary" type="submit" id="videoSubmit">生成视频</button>
+              <button class="btn btn-secondary" type="button" id="videoReset">清空表单</button>
+            </div>
+          </form>
+        </article>
+
+        <article class="card">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">视频结果</h2>
+              <p class="card-desc">URL 结果支持直接预览与下载。b64_json 仅展示长度摘要，避免页面过重。</p>
+            </div>
+            <div class="badge" id="videoResultBadge">等待请求</div>
+          </div>
+          <div id="videoResult" class="media-grid">
+            <div class="empty">先保存 session，再提交一次视频生成请求。</div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-examples">
+      <article class="card">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">调用说明与示例</h2>
+            <p class="card-desc">内容来自 /api/examples。示例中的认证方式统一为 Bearer sessionid；控制台模式下则自动使用已保存 session，无需你每次手写 Authorization。</p>
+          </div>
+          <div class="badge">GET /api/examples</div>
+        </div>
+        <div class="example-toolbar">
+          <div class="field" style="margin:0">
+            <label for="exampleCategory">示例分类</label>
+            <select id="exampleCategory">
+              <option value="all" selected>全部示例</option>
+              <option value="image">文生图 / 图生图</option>
+              <option value="video">视频 / 国际版</option>
+              <option value="models">模型接口</option>
+            </select>
+          </div>
+          <div class="example-meta-note">可以单独切换查看文生图、视频、模型列表等示例；同时展示 Python、cURL，以及兼容 OpenAI 客户端常见填写方式的 URL / API KEY / MODEL 配置。</div>
+        </div>
+        <div id="examplesContent" class="example-list">
+          <div class="empty">正在加载示例说明。</div>
+        </div>
+      </article>
+    </section>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const state = {
+      sessions: [],
+      models: [],
+      categories: {},
+      modelsByCategory: {},
+      examples: {},
+      activeExampleKey: 'all',
+      activeTab: 'sessions',
+    };
+
+    const tabs = document.querySelectorAll('.tab');
+    const panels = document.querySelectorAll('.panel');
+    const toast = document.getElementById('toast');
+
+    function escapeHtml(value) {
+      const div = document.createElement('div');
+      div.textContent = value == null ? '' : String(value);
+      return div.innerHTML;
+    }
+
+    function showToast(message, type = 'info') {
+      toast.textContent = message;
+      toast.style.borderColor = type === 'error' ? 'rgba(255,125,147,0.4)' : 'rgba(121,168,255,0.28)';
+      toast.style.color = type === 'error' ? '#ffd7de' : 'var(--text)';
+      toast.classList.add('show');
+      clearTimeout(showToast.timer);
+      showToast.timer = setTimeout(() => toast.classList.remove('show'), 2600);
+    }
+
+    function setLoading(button, loading, text) {
+      if (!button) return;
+      if (loading) {
+        button.dataset.originalText = button.textContent;
+        button.textContent = text || '处理中';
+        button.classList.add('loading');
+        button.disabled = true;
+      } else {
+        button.textContent = button.dataset.originalText || button.textContent;
+        button.classList.remove('loading');
+        button.disabled = false;
+      }
+    }
+
+    function setTab(tabName) {
+      state.activeTab = tabName;
+      tabs.forEach((tab) => tab.classList.toggle('active', tab.dataset.tab === tabName));
+      panels.forEach((panel) => panel.classList.toggle('active', panel.id === `panel-${tabName}`));
+    }
+
+    tabs.forEach((tab) => tab.addEventListener('click', () => setTab(tab.dataset.tab)));
+
+    function formatDate(dateString) {
+      if (!dateString) return '未知时间';
+      const date = new Date(dateString);
+      if (Number.isNaN(date.getTime())) return dateString;
+      return date.toLocaleString('zh-CN', { hour12: false });
+    }
+
+    function isSeedance(model) {
+      return String(model || '').includes('seedance');
+    }
+
+    function parseLines(value) {
+      return String(value || '')
+        .split(/\r?\n/)
+        .map((item) => item.trim())
+        .filter(Boolean);
+    }
+
+    async function requestJson(url, options = {}) {
+      const response = await fetch(url, options);
+      let data = null;
+      const text = await response.text();
+      try {
+        data = text ? JSON.parse(text) : {};
+      } catch {
+        data = { message: text || response.statusText };
+      }
+      if (!response.ok) {
+        throw new Error(data?.error?.message || data?.message || `请求失败：${response.status}`);
+      }
+      return data;
+    }
+
+    async function copyText(text) {
+      const value = String(text || '');
+
+      try {
+        if (navigator.clipboard?.writeText && window.isSecureContext) {
+          await navigator.clipboard.writeText(value);
+          return true;
+        }
+      } catch {}
+
+      try {
+        const input = document.createElement('textarea');
+        input.value = value;
+        input.setAttribute('readonly', 'readonly');
+        input.style.position = 'fixed';
+        input.style.top = '0';
+        input.style.left = '-9999px';
+        input.style.opacity = '0';
+        document.body.appendChild(input);
+        input.focus();
+        input.select();
+        input.setSelectionRange(0, input.value.length);
+        const copied = document.execCommand('copy');
+        document.body.removeChild(input);
+        if (copied) {
+          return true;
+        }
+      } catch {}
+
+      window.prompt('当前环境不支持自动写入剪贴板，请手动复制下面的 API KEY：', value);
+      return false;
+    }
+
+    function renderSessions() {
+      const list = document.getElementById('sessionList');
+      const count = state.sessions.length;
+      document.getElementById('sessionCountBadge').textContent = `${count} 条记录`;
+      document.getElementById('statSessions').textContent = String(count);
+      document.getElementById('statSessionsSub').textContent = count > 0 ? '控制台生成将自动注入这些 session' : '还没有保存 sessionid';
+
+      if (!count) {
+        list.innerHTML = '<div class="empty">还没有 sessionid。<br />先在左侧添加一条，再使用图片或视频生成表单。</div>';
+        return;
+      }
+
+      list.innerHTML = state.sessions.map((session) => {
+        const liveTag = session.live === true
+          ? '<span class="mini-tag good">有效</span>'
+          : session.live === false
+            ? '<span class="mini-tag bad">无效</span>'
+            : '<span class="mini-tag warn">未校验</span>';
+        const pointsText = session.points == null
+          ? '积分查询失败或暂无数据'
+          : escapeHtml(JSON.stringify(session.points));
+        return `
+          <div class="session-item">
+            <div>
+              <div class="session-name">${escapeHtml(session.name || 'Unnamed Session')}</div>
+              <div class="session-meta">
+                掩码值：${escapeHtml(session.maskedValue || '')}<br />
+                备注：${escapeHtml(session.note || '—')}<br />
+                创建时间：${escapeHtml(formatDate(session.createdAt))}
+              </div>
+              <div class="mini-tags">
+                ${liveTag}
+                <span class="mini-tag">积分：${pointsText}</span>
+              </div>
+            </div>
+            <div class="actions" style="margin-top:0">
+              <button class="btn btn-danger" type="button" onclick="deleteSession('${session.id}')">删除</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function getCategoryModels(category) {
+      return Array.isArray(state.modelsByCategory?.[category]) ? state.modelsByCategory[category] : [];
+    }
+
+    function setSelectOptions(selectId, models, fallbackValue) {
+      const select = document.getElementById(selectId);
+      if (!select) return;
+      const previousValue = fallbackValue ?? select.value;
+      const nextModels = Array.isArray(models) ? models : [];
+
+      if (!nextModels.length) {
+        select.innerHTML = '<option value="">暂无可用模型</option>';
+        select.disabled = true;
+        return;
+      }
+
+      select.disabled = false;
+      select.innerHTML = nextModels.map((model) => {
+        const label = escapeHtml(model.name || model.model_id || 'unknown-model');
+        const value = escapeHtml(model.model_id || model.name || '');
+        return `<option value="${value}">${label}</option>`;
+      }).join('');
+
+      const matched = nextModels.find((model) => model.model_id === previousValue || model.name === previousValue);
+      select.value = matched ? matched.model_id : (nextModels[0].model_id || nextModels[0].name || '');
+    }
+
+    function refreshModelSelects() {
+      const imageModels = getCategoryModels('image');
+      const videoModels = [...getCategoryModels('video'), ...getCategoryModels('seedance')];
+      setSelectOptions('imageModel', imageModels);
+      setSelectOptions('videoModel', videoModels);
+      updateVideoHint();
+    }
+
+    function populateModelFilter() {
+      const select = document.getElementById('modelFilterCategory');
+      if (!select) return;
+      const previousValue = select.value || 'all';
+      const options = Object.entries(state.categories || {}).map(([key, label]) => `<option value="${escapeHtml(key)}">${escapeHtml(label)}</option>`).join('');
+      select.innerHTML = `<option value="all">全部分类</option>${options}`;
+      const valid = Array.from(select.options).some((option) => option.value === previousValue);
+      select.value = valid ? previousValue : 'all';
+    }
+
+    function getExampleCategoryOptions() {
+      const groups = {
+        all: '全部示例',
+        image: '文生图 / 图生图',
+        video: '视频 / 国际版',
+        models: '模型接口',
+      };
+      return Object.entries(groups).filter(([key]) => key === 'all' || Object.values(state.examples || {}).some((item) => item.group === key));
+    }
+
+    function populateExampleFilter() {
+      const select = document.getElementById('exampleCategory');
+      if (!select) return;
+      const previousValue = state.activeExampleKey || select.value || 'all';
+      const options = getExampleCategoryOptions().map(([key, label]) => `<option value="${escapeHtml(key)}">${escapeHtml(label)}</option>`).join('');
+      select.innerHTML = options;
+      const valid = Array.from(select.options).some((option) => option.value === previousValue);
+      select.value = valid ? previousValue : 'all';
+      state.activeExampleKey = select.value;
+    }
+
+    function renderModels() {
+      const container = document.getElementById('modelGroups');
+      const categories = Object.entries(state.categories || {});
+      const total = state.models.length;
+      const filter = document.getElementById('modelFilterCategory')?.value || 'all';
+      document.getElementById('modelCountBadge').textContent = `${total} 个模型`;
+      document.getElementById('statModels').textContent = String(total);
+
+      if (!categories.length || !total) {
+        container.innerHTML = '<div class="empty">当前还没有模型数据，可以先在上方新增一条。</div>';
+        return;
+      }
+
+      const sections = categories
+        .filter(([key]) => filter === 'all' || filter === key)
+        .map(([key, label]) => {
+          const items = getCategoryModels(key);
+          if (!items.length) {
+            return '';
+          }
+          return `
+            <section class="model-group">
+              <div class="model-group-head">
+                <div>
+                  <div class="session-name">${escapeHtml(label)}</div>
+                  <div class="session-meta">共 ${items.length} 个 · 顺序 = 优先级</div>
+                </div>
+                <span class="pill">${escapeHtml(key)}</span>
+              </div>
+              <div class="model-items">
+                ${items.map((model, index) => `
+                  <div class="model-item">
+                    <div>
+                      <div class="model-title">${escapeHtml(model.name || model.model_id || 'unknown-model')} <span style="font-weight:normal;color:#9eb0cf;font-size:12px;">#${index + 1}</span></div>
+                      <div class="model-id">${escapeHtml(model.model_id || '')}</div>
+                      <div class="inline-note">
+                        说明：${escapeHtml(model.description || '暂无补充说明')}<br />
+                        创建时间：${escapeHtml(formatDate(model.createdAt))}
+                      </div>
+                    </div>
+                    <div class="model-actions">
+                      <button class="btn btn-secondary btn-mini" type="button" onclick="moveModel('${model.id}', 'up')">↑ 上移</button>
+                      <button class="btn btn-secondary btn-mini" type="button" onclick="moveModel('${model.id}', 'down')">↓ 下移</button>
+                      <button class="btn btn-danger btn-mini" type="button" onclick="deleteModel('${model.id}')">删除</button>
+                    </div>
+                  </div>
+                `).join('')}
+              </div>
+            </section>
+          `;
+        })
+        .filter(Boolean)
+        .join('');
+
+      container.innerHTML = sections || '<div class="empty">当前筛选分类下还没有模型。</div>';
+    }
+
+    function renderExamples() {
+      const list = document.getElementById('examplesContent');
+      const filter = document.getElementById('exampleCategory')?.value || 'all';
+      const entries = Object.entries(state.examples || {}).filter(([, item]) => filter === 'all' || item.group === filter);
+      if (!entries.length) {
+        list.innerHTML = '<div class="empty">当前分类下暂无示例。</div>';
+        return;
+      }
+
+      list.innerHTML = entries.map(([key, item]) => {
+        const openaiUrl = item.openai?.url || item.openai?.base_url || '';
+        const openaiConfig = item.openai ? `
+          <div class="example-config">
+            <div class="example-label">兼容 OpenAI 调用配置</div>
+            <div class="code-wrap"><pre>URL: ${escapeHtml(openaiUrl)}
+API KEY: ${escapeHtml(item.openai.api_key || '')}
+MODEL: ${escapeHtml(item.openai.model || '')}</pre></div>
+            ${item.openai.note ? `<div class="notice">${escapeHtml(item.openai.note)}</div>` : ''}
+          </div>
+        ` : '';
+
+        return `
+          <article class="example-item">
+            <div class="example-head">
+              <div>
+                <div class="example-title">${escapeHtml(item.title || key)}</div>
+                <div class="example-desc">${escapeHtml(item.description || '')}</div>
+              </div>
+              <span class="pill">${escapeHtml(item.group || key)}</span>
+            </div>
+            <div class="example-tabs">
+              <span class="subtab">cURL</span>
+              <span class="subtab">Python</span>
+              ${item.openai ? '<span class="subtab">URL / API KEY / MODEL</span>' : ''}
+            </div>
+            <div class="code-wrap"><pre>${escapeHtml(item.curl || '')}</pre></div>
+            <div class="code-wrap" style="margin-top:10px"><pre>${escapeHtml(item.python || '')}</pre></div>
+            ${openaiConfig}
+          </article>
+        `;
+      }).join('');
+    }
+
+    function renderImageResult(payload) {
+      const container = document.getElementById('imageResult');
+      const items = Array.isArray(payload?.data) ? payload.data : [];
+      document.getElementById('imageResultBadge').textContent = `${items.length} 条结果`;
+      if (!items.length) {
+        container.innerHTML = '<div class="empty">接口已返回，但没有 data 项。</div>';
+        return;
+      }
+      container.innerHTML = items.map((item, index) => {
+        if (item.url) {
+          return `
+            <div class="result-item">
+              <div class="session-name">图片结果 #${index + 1}</div>
+              <div class="result-meta">URL：<a href="${escapeHtml(item.url)}" target="_blank" rel="noreferrer" style="color:var(--accent)">${escapeHtml(item.url)}</a></div>
+              <div class="actions">
+                <a class="btn btn-secondary" href="${escapeHtml(item.url)}" target="_blank" rel="noreferrer">打开原图</a>
+                <a class="btn btn-primary" href="${escapeHtml(item.url)}" download>下载</a>
+              </div>
+              <div class="result-media"><img src="${escapeHtml(item.url)}" alt="generated image ${index + 1}" /></div>
+            </div>
+          `;
+        }
+        return `
+          <div class="result-item">
+            <div class="session-name">图片结果 #${index + 1}</div>
+            <div class="result-meta">返回格式：b64_json，长度 ${String(item.b64_json || '').length}</div>
+            <div class="code-wrap"><pre>${escapeHtml(String(item.b64_json || '').slice(0, 180))}${String(item.b64_json || '').length > 180 ? '...' : ''}</pre></div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderVideoResult(payload) {
+      const container = document.getElementById('videoResult');
+      const items = Array.isArray(payload?.data) ? payload.data : [];
+      document.getElementById('videoResultBadge').textContent = `${items.length} 条结果`;
+      if (!items.length) {
+        container.innerHTML = '<div class="empty">接口已返回，但没有 data 项。</div>';
+        return;
+      }
+      container.innerHTML = items.map((item, index) => {
+        if (item.url) {
+          return `
+            <div class="result-item">
+              <div class="session-name">视频结果 #${index + 1}</div>
+              <div class="result-meta">URL：<a href="${escapeHtml(item.url)}" target="_blank" rel="noreferrer" style="color:var(--accent)">${escapeHtml(item.url)}</a></div>
+              <div class="actions">
+                <a class="btn btn-secondary" href="${escapeHtml(item.url)}" target="_blank" rel="noreferrer">打开原视频</a>
+                <a class="btn btn-primary" href="${escapeHtml(item.url)}" download>下载</a>
+              </div>
+              <div class="result-media"><video src="${escapeHtml(item.url)}" controls playsinline></video></div>
+            </div>
+          `;
+        }
+        return `
+          <div class="result-item">
+            <div class="session-name">视频结果 #${index + 1}</div>
+            <div class="result-meta">返回格式：b64_json，长度 ${String(item.b64_json || '').length}</div>
+            <div class="code-wrap"><pre>${escapeHtml(String(item.b64_json || '').slice(0, 180))}${String(item.b64_json || '').length > 180 ? '...' : ''}</pre></div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    async function loadSessions() {
+      const data = await requestJson('/api/sessions');
+      state.sessions = Array.isArray(data.sessions) ? data.sessions : [];
+      renderSessions();
+    }
+
+    async function loadModels() {
+      const data = await requestJson('/api/models');
+      state.models = Array.isArray(data.models) ? data.models : [];
+      state.categories = data.categories || {};
+      state.modelsByCategory = data.models_by_category || {};
+      populateModelFilter();
+      renderModels();
+      refreshModelSelects();
+    }
+
+    async function loadExamples() {
+      const data = await requestJson('/api/examples');
+      state.examples = data.examples || {};
+      populateExampleFilter();
+      renderExamples();
+    }
+
+    async function loadAll() {
+      try {
+        await Promise.all([loadSessions(), loadModels(), loadExamples()]);
+      } catch (error) {
+        showToast(error.message || '初始化失败', 'error');
+      }
+    }
+
+    async function deleteSession(id) {
+      try {
+        await requestJson(`/api/sessions/${id}`, { method: 'DELETE' });
+        showToast('Session 已删除');
+        await loadSessions();
+      } catch (error) {
+        showToast(error.message || '删除失败', 'error');
+      }
+    }
+    window.deleteSession = deleteSession;
+
+    async function deleteModel(id) {
+      try {
+        await requestJson(`/api/models/${id}`, { method: 'DELETE' });
+        showToast('模型已删除');
+        await loadModels();
+      } catch (error) {
+        showToast(error.message || '删除失败', 'error');
+      }
+    }
+    window.deleteModel = deleteModel;
+
+    async function moveModel(id, direction) {
+      try {
+        await requestJson(`/api/models/${id}/move`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ direction }),
+        });
+        showToast(direction === 'up' ? '模型已上移' : '模型已下移');
+        await loadModels();
+      } catch (error) {
+        showToast(error.message || '移动失败', 'error');
+      }
+    }
+    window.moveModel = moveModel;
+
+    document.getElementById('sessionForm').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const button = document.getElementById('sessionSubmit');
+      setLoading(button, true, '保存中');
+      try {
+        const payload = {
+          name: document.getElementById('sessionName').value.trim(),
+          note: document.getElementById('sessionNote').value.trim(),
+          value: document.getElementById('sessionValue').value.trim(),
+        };
+        await requestJson('/api/sessions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        document.getElementById('sessionForm').reset();
+        showToast('Session 保存成功');
+        await loadSessions();
+      } catch (error) {
+        showToast(error.message || '保存失败', 'error');
+      } finally {
+        setLoading(button, false);
+      }
+    });
+
+    document.getElementById('modelForm').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const button = document.getElementById('modelSubmit');
+      setLoading(button, true, '添加中');
+      try {
+        const payload = {
+          name: document.getElementById('modelName').value.trim(),
+          model_id: document.getElementById('modelId').value.trim(),
+          category: document.getElementById('modelCategory').value,
+          description: document.getElementById('modelDescription').value.trim(),
+        };
+        await requestJson('/api/models', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        document.getElementById('modelForm').reset();
+        showToast('模型添加成功');
+        await loadModels();
+      } catch (error) {
+        showToast(error.message || '添加失败', 'error');
+      } finally {
+        setLoading(button, false);
+      }
+    });
+
+    document.getElementById('modelRefresh').addEventListener('click', async () => {
+      try {
+        await loadModels();
+        showToast('模型列表已刷新');
+      } catch (error) {
+        showToast(error.message || '刷新失败', 'error');
+      }
+    });
+
+    document.getElementById('modelFilterCategory').addEventListener('change', renderModels);
+    document.getElementById('exampleCategory').addEventListener('change', (event) => {
+      state.activeExampleKey = event.target.value;
+      renderExamples();
+    });
+
+    document.getElementById('sessionRefresh').addEventListener('click', async () => {
+      try {
+        await loadSessions();
+        showToast('Session 列表已刷新');
+      } catch (error) {
+        showToast(error.message || '刷新失败', 'error');
+      }
+    });
+
+    document.getElementById('copyApiKey').addEventListener('click', async () => {
+      const button = document.getElementById('copyApiKey');
+      setLoading(button, true, '刷新并复制中');
+      try {
+        await loadSessions();
+        const data = await requestJson('/api/sessions/api-key');
+        const copied = await copyText(data.api_key || '');
+        const sessionCount = Array.isArray(state.sessions) ? state.sessions.length : (data.count ?? 0);
+        if (copied) {
+          showToast(`API KEY 已刷新并复制（共 ${sessionCount} 个 session）`);
+        } else {
+          showToast(`当前环境不支持自动复制，已弹出手动复制框（共 ${sessionCount} 个 session）`, 'error');
+        }
+      } catch (error) {
+        showToast(error.message || '复制失败', 'error');
+      } finally {
+        setLoading(button, false);
+      }
+    });
+
+    document.getElementById('imageReset').addEventListener('click', () => {
+      document.getElementById('imageForm').reset();
+      document.getElementById('imageResult').innerHTML = '<div class="empty">表单已清空，可以重新发起图片生成。</div>';
+      document.getElementById('imageResultBadge').textContent = '等待请求';
+    });
+
+    document.getElementById('videoReset').addEventListener('click', () => {
+      document.getElementById('videoForm').reset();
+      updateVideoHint();
+      document.getElementById('videoResult').innerHTML = '<div class="empty">表单已清空，可以重新发起视频生成。</div>';
+      document.getElementById('videoResultBadge').textContent = '等待请求';
+    });
+
+    document.getElementById('imageForm').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const button = document.getElementById('imageSubmit');
+      setLoading(button, true, '生成中');
+      try {
+        const files = document.getElementById('imageFiles').files;
+        const imageUrls = parseLines(document.getElementById('imageUrls').value);
+        let response;
+
+        if (files && files.length > 0) {
+          const formData = new FormData();
+          formData.set('model', document.getElementById('imageModel').value);
+          formData.set('prompt', document.getElementById('imagePrompt').value);
+          formData.set('negative_prompt', document.getElementById('imageNegativePrompt').value);
+          formData.set('ratio', document.getElementById('imageRatio').value);
+          formData.set('resolution', document.getElementById('imageResolution').value);
+          formData.set('sample_strength', document.getElementById('imageStrength').value);
+          formData.set('response_format', document.getElementById('imageResponseFormat').value);
+          Array.from(files).forEach((file) => formData.append('images', file));
+          response = await requestJson('/api/generate/image', {
+            method: 'POST',
+            body: formData,
+          });
+        } else {
+          const payload = {
+            model: document.getElementById('imageModel').value,
+            prompt: document.getElementById('imagePrompt').value,
+            negative_prompt: document.getElementById('imageNegativePrompt').value,
+            ratio: document.getElementById('imageRatio').value,
+            resolution: document.getElementById('imageResolution').value,
+            sample_strength: Number(document.getElementById('imageStrength').value || 0.55),
+            response_format: document.getElementById('imageResponseFormat').value,
+          };
+          if (imageUrls.length) payload.images = imageUrls;
+          response = await requestJson('/api/generate/image', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+        }
+
+        renderImageResult(response);
+        showToast('图片请求已完成');
+      } catch (error) {
+        showToast(error.message || '图片生成失败', 'error');
+      } finally {
+        setLoading(button, false);
+      }
+    });
+
+    function updateVideoHint() {
+      const model = document.getElementById('videoModel').value;
+      const hint = document.getElementById('videoHint');
+      if (isSeedance(model)) {
+        hint.textContent = '当前模型为 Seedance 系列，duration 支持 4-15 秒，建议配合素材文件或 file_paths 使用。';
+      } else {
+        hint.textContent = '当前模型为普通视频模型，duration 建议填写 5 或 10。';
+      }
+    }
+
+    document.getElementById('videoModel').addEventListener('change', updateVideoHint);
+    updateVideoHint();
+
+    document.getElementById('videoForm').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const button = document.getElementById('videoSubmit');
+      setLoading(button, true, '生成中');
+      try {
+        const files = document.getElementById('videoFiles').files;
+        const pathValues = document.getElementById('videoFilePaths').value
+          .split(',')
+          .map((item) => item.trim())
+          .filter(Boolean);
+        let response;
+
+        if (files && files.length > 0) {
+          const formData = new FormData();
+          formData.set('model', document.getElementById('videoModel').value);
+          formData.set('prompt', document.getElementById('videoPrompt').value);
+          formData.set('ratio', document.getElementById('videoRatio').value);
+          formData.set('resolution', document.getElementById('videoResolution').value);
+          formData.set('duration', document.getElementById('videoDuration').value);
+          formData.set('response_format', document.getElementById('videoResponseFormat').value);
+          pathValues.forEach((value) => formData.append('file_paths', value));
+          Array.from(files).forEach((file) => formData.append('files', file));
+          response = await requestJson('/api/generate/video', {
+            method: 'POST',
+            body: formData,
+          });
+        } else {
+          const payload = {
+            model: document.getElementById('videoModel').value,
+            prompt: document.getElementById('videoPrompt').value,
+            ratio: document.getElementById('videoRatio').value,
+            resolution: document.getElementById('videoResolution').value,
+            duration: Number(document.getElementById('videoDuration').value || 5),
+            response_format: document.getElementById('videoResponseFormat').value,
+          };
+          if (pathValues.length) payload.file_paths = pathValues;
+          response = await requestJson('/api/generate/video', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+        }
+
+        renderVideoResult(response);
+        showToast('视频请求已完成');
+      } catch (error) {
+        showToast(error.message || '视频生成失败', 'error');
+      } finally {
+        setLoading(button, false);
+      }
+    });
+
+    loadAll();
+  </script>
+</body>
+</html>
