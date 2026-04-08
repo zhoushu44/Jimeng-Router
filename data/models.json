@@ -89,17 +89,6 @@
       "createdAt": "2026-04-07T15:23:26.644Z"
     },
     {
-      "name": "jimeng-2.1",
-      "model_id": "jimeng-2.1",
-      "category": "image",
-      "object": "model",
-      "owned_by": "jimeng-free-api",
-      "description": "即梦AI图像生成模型 2.1 版本",
-      "id": "b95aaf48329511f180b0c1af79897b08",
-      "sort": 8,
-      "createdAt": "2026-04-07T15:23:26.644Z"
-    },
-    {
       "name": "jimeng-2.0-pro",
       "model_id": "jimeng-2.0-pro",
       "category": "image",
@@ -107,18 +96,7 @@
       "owned_by": "jimeng-free-api",
       "description": "即梦AI图像生成模型 2.0 专业版",
       "id": "b95aaf49329511f180b0c1af79897b08",
-      "sort": 9,
-      "createdAt": "2026-04-07T15:23:26.644Z"
-    },
-    {
-      "name": "jimeng-2.0",
-      "model_id": "jimeng-2.0",
-      "category": "image",
-      "object": "model",
-      "owned_by": "jimeng-free-api",
-      "description": "即梦AI图像生成模型 2.0 版本",
-      "id": "b95aaf4a329511f180b0c1af79897b08",
-      "sort": 10,
+      "sort": 8,
       "createdAt": "2026-04-07T15:23:26.644Z"
     },
     {
@@ -129,7 +107,7 @@
       "owned_by": "jimeng-free-api",
       "description": "即梦AI图像生成模型 1.4 版本",
       "id": "b95aaf4b329511f180b0c1af79897b08",
-      "sort": 11,
+      "sort": 9,
       "createdAt": "2026-04-07T15:23:26.644Z"
     },
     {
@@ -140,40 +118,7 @@
       "owned_by": "jimeng-free-api",
       "description": "即梦AI图像生成模型 XL Pro 版本",
       "id": "b95aaf4c329511f180b0c1af79897b08",
-      "sort": 12,
-      "createdAt": "2026-04-07T15:23:26.644Z"
-    },
-    {
-      "name": "jimeng-video-3.5-pro",
-      "model_id": "jimeng-video-3.5-pro",
-      "category": "video",
-      "object": "model",
-      "owned_by": "jimeng-free-api",
-      "description": "即梦AI视频生成模型 3.5 专业版",
-      "id": "b95aaf4d329511f180b0c1af79897b08",
-      "sort": 0,
-      "createdAt": "2026-04-07T15:23:26.644Z"
-    },
-    {
-      "name": "jimeng-video-3.0",
-      "model_id": "jimeng-video-3.0",
-      "category": "video",
-      "object": "model",
-      "owned_by": "jimeng-free-api",
-      "description": "即梦AI视频生成模型 3.0 版本",
-      "id": "b95aaf4e329511f180b0c1af79897b08",
-      "sort": 1,
-      "createdAt": "2026-04-07T15:23:26.644Z"
-    },
-    {
-      "name": "jimeng-video-3.0-pro",
-      "model_id": "jimeng-video-3.0-pro",
-      "category": "video",
-      "object": "model",
-      "owned_by": "jimeng-free-api",
-      "description": "即梦AI视频生成模型 3.0 专业版",
-      "id": "b95aaf4f329511f180b0c1af79897b08",
-      "sort": 2,
+      "sort": 10,
       "createdAt": "2026-04-07T15:23:26.644Z"
     },
     {
@@ -273,6 +218,17 @@
       "description": "Seedance 2.0 VIP Vision 主模态能力视频模型（jimeng-video-seedance-2.0-vip 的别名，向后兼容）",
       "id": "b95aaf58329511f180b0c1af79897b08",
       "sort": 8,
+      "createdAt": "2026-04-07T15:23:26.644Z"
+    },
+    {
+      "name": "jimeng-video-3.0-pro",
+      "model_id": "jimeng-video-3.0-pro",
+      "category": "video",
+      "object": "model",
+      "owned_by": "jimeng-free-api",
+      "description": "即梦AI视频生成模型 3.0 专业版",
+      "id": "b95aaf4f329511f180b0c1af79897b08",
+      "sort": 0,
       "createdAt": "2026-04-07T15:23:26.644Z"
     }
   ]

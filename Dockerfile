@@ -1,14 +1,27 @@
-FROM node:lts AS BUILD_IMAGE
+FROM node:20-bookworm-slim AS base
+
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright \
+    NODE_ENV=production \
+    SERVER_ENV=dev \
+    SERVER_HOST=0.0.0.0 \
+    SERVER_PORT=5200
 
 WORKDIR /app
 
-COPY . /app
+FROM base AS build
 
-RUN yarn install --registry https://registry.npmmirror.com/ --ignore-engines && yarn run build
+ENV NODE_ENV=development
 
-FROM node:lts
+COPY package.json package-lock.json tsconfig.json libs.d.ts ./
+RUN npm ci
 
-# 安装 Chromium 依赖
+COPY src ./src
+COPY public ./public
+COPY configs ./configs
+RUN npm run build
+
+FROM base AS runtime
+
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libnss3 \
     libatk1.0-0 \
@@ -28,17 +41,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libwayland-client0 \
     && rm -rf /var/lib/apt/lists/*
 
-COPY --from=BUILD_IMAGE /app/configs /app/configs
-COPY --from=BUILD_IMAGE /app/package.json /app/package.json
-COPY --from=BUILD_IMAGE /app/dist /app/dist
-COPY --from=BUILD_IMAGE /app/public /app/public
-COPY --from=BUILD_IMAGE /app/node_modules /app/node_modules
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev && npx playwright-core install chromium
 
-WORKDIR /app
+COPY --from=build /app/dist ./dist
+COPY --from=build /app/public ./public
+COPY --from=build /app/configs ./configs
 
-# 安装 Playwright Chromium 浏览器
-RUN npx playwright-core install chromium
+RUN mkdir -p /app/data /app/logs /app/tmp
 
-EXPOSE 8000
+EXPOSE 5200
 
 CMD ["npm", "start"]

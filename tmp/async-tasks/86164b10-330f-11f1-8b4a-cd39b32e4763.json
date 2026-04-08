@@ -1,0 +1,10 @@
+{
+  "taskId": "86164b10-330f-11f1-8b4a-cd39b32e4763",
+  "status": "failed",
+  "model": "jimeng-video-seedance-2.0-fast-vip",
+  "prompt": "@1 ͼƬ�е����￪ʼ΢Ц��ת�",
+  "refreshToken": "17def81a296db7a194537de5cac80365",
+  "createdAt": 1775627719233,
+  "updatedAt": 1775627722886,
+  "error": "[undefined] [请求jimeng失败]: 生成失败，需要安全确认，请刷新页面重试"
+}

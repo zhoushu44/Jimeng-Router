@@ -114,6 +114,45 @@ function getInternationalVideoDraftVersion(_model: string): string {
   return MODEL_DRAFT_VERSIONS[_model] || DEFAULT_DRAFT_VERSION;
 }
 
+function isSeedanceSecurityConfirmationMessage(message?: string): boolean {
+  if (!message) {
+    return false;
+  }
+  return message.includes("安全确认") || message.includes("刷新页面重试");
+}
+
+function buildSeedanceGenerateFailure(
+  errmsg: string,
+  context: {
+    model: string;
+    historyId?: string;
+    ret?: number;
+    asyncTask?: boolean;
+  }
+): APIException {
+  const diagnostics = {
+    stage: "seedance_generate",
+    model: context.model,
+    ret: context.ret,
+    historyId: context.historyId,
+    failureType: isSeedanceSecurityConfirmationMessage(errmsg)
+      ? "upstream_security_confirmation_required"
+      : "upstream_generate_failed",
+    asyncTask: !!context.asyncTask,
+  };
+
+  if (isSeedanceSecurityConfirmationMessage(errmsg)) {
+    logger.warn(`Seedance: 上游要求安全确认，model=${context.model}, ret=${context.ret ?? "unknown"}, async=${context.asyncTask ? "yes" : "no"}, historyId=${context.historyId || "none"}`);
+    return new APIException(
+      EX.API_REQUEST_FAILED,
+      `[Seedance安全确认] 上游要求完成安全确认，请在即梦网页端完成验证后重试。原始信息: ${errmsg}`
+    ).setData(diagnostics);
+  }
+
+  logger.warn(`Seedance: generate 请求被上游拒绝，model=${context.model}, ret=${context.ret ?? "unknown"}, async=${context.asyncTask ? "yes" : "no"}, historyId=${context.historyId || "none"}, errmsg=${errmsg}`);
+  return new APIException(EX.API_REQUEST_FAILED, `[请求jimeng失败]: ${errmsg}`).setData(diagnostics);
+}
+
 // 判断是否为 Seedance 模型
 export function isSeedanceModel(model: string): boolean {
   return model.startsWith("seedance-") || model.startsWith("jimeng-video-seedance-");
@@ -2003,23 +2042,39 @@ export async function generateSeedanceVideo(
   };
 
   logger.info(`Seedance: 通过浏览器代理发送 generate 请求...`);
-  const generateResult = await browserService.fetch(
-    token,
-    generateUrl,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(generateBody),
-    }
-  );
+  let generateResult;
+  try {
+    generateResult = await browserService.fetch(
+      token,
+      generateUrl,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(generateBody),
+      }
+    );
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    logger.error(`Seedance: 浏览器代理请求异常, model=${model}, message=${message}`);
+    throw new APIException(
+      EX.API_REQUEST_FAILED,
+      `Seedance 浏览器代理请求失败: ${message}`
+    ).setData({
+      stage: "seedance_generate",
+      model,
+      failureType: "browser_proxy_request_failed",
+      asyncTask: false,
+    });
+  }
 
   // 检查浏览器代理返回的结果
   const { ret, errmsg, data: generateData } = generateResult;
   if (ret !== undefined && Number(ret) !== 0) {
+    logger.warn(`Seedance: generate 返回失败, model=${model}, ret=${ret}, errmsg=${String(errmsg || "").substring(0, 160)}`);
     if (Number(ret) === 5000) {
       throw new APIException(EX.API_IMAGE_GENERATION_INSUFFICIENT_POINTS, `[无法生成视频]: 即梦积分可能不足，${errmsg}`);
     }
-    throw new APIException(EX.API_REQUEST_FAILED, `[请求jimeng失败]: ${errmsg}`);
+    throw buildSeedanceGenerateFailure(errmsg, { model, ret: Number(ret), asyncTask: false });
   }
   const aigc_data = generateData?.aigc_data || generateResult.aigc_data;
 
@@ -3862,17 +3917,33 @@ async function _generateSeedanceVideoWithHistoryId(
   };
 
   logger.info(`异步任务-Seedance: 通过浏览器代理发送 generate 请求...`);
-  const generateResult = await browserService.fetch(token, generateUrl, {
-    method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(generateBody),
-  });
+  let generateResult;
+  try {
+    generateResult = await browserService.fetch(token, generateUrl, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(generateBody),
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    logger.error(`异步任务-Seedance: 浏览器代理请求异常, model=${model}, message=${message}`);
+    throw new APIException(
+      EX.API_REQUEST_FAILED,
+      `Seedance 浏览器代理请求失败: ${message}`
+    ).setData({
+      stage: "seedance_generate",
+      model,
+      failureType: "browser_proxy_request_failed",
+      asyncTask: true,
+    });
+  }
 
   const { ret, errmsg, data: generateData } = generateResult;
   if (ret !== undefined && Number(ret) !== 0) {
+    logger.warn(`异步任务-Seedance: generate 返回失败, model=${model}, ret=${ret}, errmsg=${String(errmsg || "").substring(0, 160)}`);
     if (Number(ret) === 5000) {
       throw new APIException(EX.API_IMAGE_GENERATION_INSUFFICIENT_POINTS, `[无法生成视频]: 即梦积分可能不足，${errmsg}`);
     }
-    throw new APIException(EX.API_REQUEST_FAILED, `[请求jimeng失败]: ${errmsg}`);
+    throw buildSeedanceGenerateFailure(errmsg, { model, ret: Number(ret), asyncTask: true });
   }
   const aigc_data = generateData?.aigc_data || generateResult.aigc_data;
   const historyId = aigc_data.history_record_id;
@@ -4012,6 +4083,9 @@ export function submitAsyncVideoTask(
         task.updatedAt = Date.now();
         saveTaskToFile(task);
         logger.error(`异步任务失败: ${taskId}, 错误: ${task.error}`);
+        if (error instanceof APIException && error.data) {
+          logger.warn(`异步任务失败诊断: ${JSON.stringify(error.data)}`);
+        }
       }
     } finally {
       activeAsyncCount--;

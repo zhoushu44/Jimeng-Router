@@ -39,10 +39,21 @@ interface BrowserSession {
   region?: "cn" | "international"; // 区域标识
 }
 
+interface BrowserPageDiagnostics {
+  url: string;
+  readyState: string;
+  title: string;
+  fetchHooked: boolean;
+  hasBdms: boolean;
+  hasSecsdk: boolean;
+  hasBytedAcrawler: boolean;
+}
+
 class BrowserService {
   private browser: Browser | null = null;
   private sessions: Map<string, BrowserSession> = new Map();
   private launching: Promise<Browser> | null = null;
+  private sessionCreations: Map<string, Promise<BrowserSession>> = new Map();
 
   /**
    * 懒启动浏览器实例
@@ -69,13 +80,17 @@ class BrowserService {
             "--disable-gpu",
             "--no-first-run",
             "--no-zygote",
-            "--single-process",
           ],
         });
 
         this.browser.on("disconnected", () => {
           logger.warn("BrowserService: 浏览器已断开连接");
           this.browser = null;
+          for (const session of this.sessions.values()) {
+            if (session.idleTimer) {
+              clearTimeout(session.idleTimer);
+            }
+          }
           this.sessions.clear();
         });
 
@@ -89,6 +104,58 @@ class BrowserService {
     return this.launching;
   }
 
+  private isSessionValid(session: BrowserSession | undefined | null): session is BrowserSession {
+    if (!session) {
+      return false;
+    }
+
+    if (!this.browser?.isConnected()) {
+      return false;
+    }
+
+    if (session.page.isClosed()) {
+      return false;
+    }
+
+    try {
+      return !!session.page.context();
+    } catch {
+      return false;
+    }
+  }
+
+  private refreshSessionTimer(sessionKey: string, session: BrowserSession) {
+    session.lastUsed = Date.now();
+    if (session.idleTimer) {
+      clearTimeout(session.idleTimer);
+    }
+    session.idleTimer = setTimeout(() => this.closeSession(sessionKey), SESSION_IDLE_TIMEOUT);
+  }
+
+  private async collectPageDiagnostics(page: Page): Promise<BrowserPageDiagnostics> {
+    try {
+      return await page.evaluate(() => ({
+        url: window.location.href,
+        readyState: document.readyState,
+        title: document.title,
+        fetchHooked: window.fetch.toString().indexOf("native code") === -1,
+        hasBdms: !!(window as any).bdms,
+        hasSecsdk: !!(window as any).__secsdk,
+        hasBytedAcrawler: !!(window as any).byted_acrawler,
+      }));
+    } catch {
+      return {
+        url: page.url(),
+        readyState: "unknown",
+        title: "",
+        fetchHooked: false,
+        hasBdms: false,
+        hasSecsdk: false,
+        hasBytedAcrawler: false,
+      };
+    }
+  }
+
   /**
    * 获取或创建指定 token 的浏览器会话
    * @param token raw sessionid (不含前缀)
@@ -97,17 +164,29 @@ class BrowserService {
   async getSession(token: string, region: "cn" | "international" = "cn"): Promise<BrowserSession> {
     const sessionKey = `${region}:${token}`;
     const existing = this.sessions.get(sessionKey);
-    if (existing) {
-      existing.lastUsed = Date.now();
-      // 重置空闲计时器
-      if (existing.idleTimer) {
-        clearTimeout(existing.idleTimer);
-      }
-      existing.idleTimer = setTimeout(() => this.closeSession(sessionKey), SESSION_IDLE_TIMEOUT);
+    if (this.isSessionValid(existing)) {
+      this.refreshSessionTimer(sessionKey, existing);
       return existing;
     }
 
-    return this.createSession(token, region);
+    if (existing) {
+      logger.warn(`BrowserService: 检测到失效会话，准备重建 ${sessionKey.substring(0, 16)}...`);
+      await this.closeSession(sessionKey);
+    }
+
+    const inflight = this.sessionCreations.get(sessionKey);
+    if (inflight) {
+      return inflight;
+    }
+
+    const creation = this.createSession(token, region);
+    this.sessionCreations.set(sessionKey, creation);
+
+    try {
+      return await creation;
+    } finally {
+      this.sessionCreations.delete(sessionKey);
+    }
   }
 
   /**
@@ -202,6 +281,28 @@ class BrowserService {
 
     const page = await context.newPage();
 
+    page.on("close", () => {
+      logger.warn(`BrowserService: 页面已关闭，清理会话 ${sessionKey.substring(0, 16)}...`);
+      const current = this.sessions.get(sessionKey);
+      if (current?.page === page) {
+        if (current.idleTimer) {
+          clearTimeout(current.idleTimer);
+        }
+        this.sessions.delete(sessionKey);
+      }
+    });
+
+    context.on("close", () => {
+      logger.warn(`BrowserService: 上下文已关闭，清理会话 ${sessionKey.substring(0, 16)}...`);
+      const current = this.sessions.get(sessionKey);
+      if (current?.context === context) {
+        if (current.idleTimer) {
+          clearTimeout(current.idleTimer);
+        }
+        this.sessions.delete(sessionKey);
+      }
+    });
+
     // 国际版：设置 API 路由重写（必须在 context route 之后注册，page route 优先）
     if (region === "international") {
       await this.setupInternationalApiRoute(page);
@@ -212,10 +313,19 @@ class BrowserService {
       ? "https://dreamina.capcut.com/ai-tool/video/generate"
       : "https://jimeng.jianying.com/ai-tool/video/generate";
     logger.info(`BrowserService: 正在导航到 ${navUrl} ...`);
-    await page.goto(navUrl, {
-      waitUntil: "domcontentloaded",
-      timeout: 30000,
-    });
+    try {
+      await page.goto(navUrl, {
+        waitUntil: "domcontentloaded",
+        timeout: 30000,
+      });
+    } catch (err) {
+      const message = (err as Error).message;
+      logger.error(`BrowserService: 页面导航失败: ${message}`);
+      try {
+        await context.close();
+      } catch {}
+      throw new Error(`浏览器页面初始化失败: ${message}`);
+    }
 
     // 等待安全 SDK 就绪
     const sdkName = region === "international" ? "secsdk" : "bdms";
@@ -256,20 +366,25 @@ class BrowserService {
         );
       }
       logger.info(`BrowserService: ${sdkName} SDK 已就绪`);
+      const diagnostics = await this.collectPageDiagnostics(page);
+      logger.info(`BrowserService: 页面诊断 url=${diagnostics.url.substring(0, 160)}, readyState=${diagnostics.readyState}, fetchHooked=${diagnostics.fetchHooked}, bdms=${diagnostics.hasBdms}, secsdk=${diagnostics.hasSecsdk}, acrawler=${diagnostics.hasBytedAcrawler}`);
     } catch (err) {
       logger.warn(
         `BrowserService: ${sdkName} SDK 等待超时，可能未完全加载，继续尝试...`
       );
+      const diagnostics = await this.collectPageDiagnostics(page);
+      logger.warn(`BrowserService: SDK 超时后的页面诊断 url=${diagnostics.url.substring(0, 160)}, readyState=${diagnostics.readyState}, fetchHooked=${diagnostics.fetchHooked}, bdms=${diagnostics.hasBdms}, secsdk=${diagnostics.hasSecsdk}, acrawler=${diagnostics.hasBytedAcrawler}`);
     }
 
     const session: BrowserSession = {
       context,
       page,
       lastUsed: Date.now(),
-      idleTimer: setTimeout(() => this.closeSession(sessionKey), SESSION_IDLE_TIMEOUT),
+      idleTimer: null,
       region,
     };
 
+    this.refreshSessionTimer(sessionKey, session);
     this.sessions.set(sessionKey, session);
     return session;
   }
@@ -286,13 +401,13 @@ class BrowserService {
       clearTimeout(session.idleTimer);
     }
 
+    this.sessions.delete(token);
+
     try {
       await session.context.close();
     } catch (err) {
       // 忽略关闭错误
     }
-
-    this.sessions.delete(token);
   }
 
   /**
@@ -330,6 +445,7 @@ class BrowserService {
     const sessionToken = region === "international" && /^[a-z]{2}-/i.test(token)
       ? token.substring(3)
       : token;
+    const sessionKey = `${region}:${sessionToken}`;
     const session = await this.getSession(sessionToken, region);
 
     // 国际版：将 API URL 转为同源 URL，secsdk 需要同源上下文才能正确签名
@@ -338,6 +454,12 @@ class BrowserService {
     logger.info(`BrowserService: 代理请求 ${options.method || "GET"} ${fetchUrl.substring(0, 100)}...`);
 
     try {
+      const pageDiagnosticsBeforeFetch = await this.collectPageDiagnostics(session.page);
+      logger.info(`BrowserService: fetch 前页面诊断 url=${pageDiagnosticsBeforeFetch.url.substring(0, 160)}, readyState=${pageDiagnosticsBeforeFetch.readyState}, fetchHooked=${pageDiagnosticsBeforeFetch.fetchHooked}, bdms=${pageDiagnosticsBeforeFetch.hasBdms}, secsdk=${pageDiagnosticsBeforeFetch.hasSecsdk}, acrawler=${pageDiagnosticsBeforeFetch.hasBytedAcrawler}`);
+      if (!this.isSessionValid(session)) {
+        throw new Error("浏览器会话已失效，fetch 前检测失败");
+      }
+
       const result = await session.page.evaluate(
         async ({ url, options }) => {
           try {
@@ -371,18 +493,29 @@ class BrowserService {
         throw new Error(`浏览器 fetch 失败: ${result.error}`);
       }
 
+      this.refreshSessionTimer(sessionKey, session);
       logger.info(`BrowserService: 响应状态 ${result.status}`);
 
+      let parsedResult: any;
       try {
-        return JSON.parse(result.text);
+        parsedResult = JSON.parse(result.text);
       } catch {
         logger.warn(`BrowserService: 响应不是有效 JSON: ${result.text.substring(0, 200)}`);
         return result.text;
       }
+
+      if (parsedResult && typeof parsedResult === "object") {
+        const parsedRet = parsedResult.ret;
+        const parsedErrmsg = parsedResult.errmsg;
+        if (parsedRet !== undefined && Number(parsedRet) !== 0) {
+          logger.warn(`BrowserService: 上游返回业务失败 ret=${parsedRet}, errmsg=${String(parsedErrmsg || "").substring(0, 160)}`);
+        }
+      }
+
+      return parsedResult;
     } catch (err) {
       // 如果执行失败（页面崩溃等），清理会话以便下次重建
       logger.error(`BrowserService: 请求执行失败: ${(err as Error).message}`);
-      const sessionKey = `${region}:${sessionToken}`;
       await this.closeSession(sessionKey);
       throw err;
     }

@@ -1,0 +1,18 @@
+services:
+  jimeng-free-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: jimeng-free-api:local
+    ports:
+      - "0.0.0.0:5200:5200"
+    environment:
+      SERVER_ENV: dev
+      SERVER_HOST: 0.0.0.0
+      SERVER_PORT: 5200
+      NODE_ENV: production
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./tmp:/app/tmp
+    restart: unless-stopped
