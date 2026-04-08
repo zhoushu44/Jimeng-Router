@@ -1,9 +1,9 @@
 services:
-  jimeng-free-api:
+  jimeng-router:
     build:
       context: .
       dockerfile: Dockerfile
-    image: jimeng-free-api:local
+    image: jimeng-router:local
     ports:
       - "0.0.0.0:5200:5200"
     environment:

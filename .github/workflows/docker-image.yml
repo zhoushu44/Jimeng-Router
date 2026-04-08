@@ -27,7 +27,7 @@ jobs:
       - name: Validate image configuration
         run: |
           if [ -z "${IMAGE_NAME}" ]; then
-            echo "Repository variable DOCKERHUB_IMAGE is required, for example <namespace>/jimeng-free-api-all." >&2
+            echo "Repository variable DOCKERHUB_IMAGE is required, for example <namespace>/jimeng-router." >&2
             exit 1
           fi
           if [ -z "${DOCKERHUB_USERNAME}" ]; then
