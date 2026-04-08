@@ -35,28 +35,13 @@ jobs:
             type=sha,format=short
 
       - name: Log in to Docker Hub
-        if: ${{ env.DOCKERHUB_USERNAME != '' && (env.DOCKERHUB_TOKEN != '' || env.DOCKERHUB_PASSWORD != '') }}
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ env.DOCKERHUB_USERNAME }}
           password: ${{ env.DOCKERHUB_TOKEN != '' && env.DOCKERHUB_TOKEN || env.DOCKERHUB_PASSWORD }}
 
-      - name: Build image only
-        if: ${{ env.DOCKERHUB_USERNAME == '' || (env.DOCKERHUB_TOKEN == '' && env.DOCKERHUB_PASSWORD == '') }}
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ./Dockerfile
-          push: false
-          load: false
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
       - name: Build and push image
-        if: ${{ env.DOCKERHUB_USERNAME != '' && (env.DOCKERHUB_TOKEN != '' || env.DOCKERHUB_PASSWORD != '') }}
         uses: docker/build-push-action@v6
         with:
           context: .
