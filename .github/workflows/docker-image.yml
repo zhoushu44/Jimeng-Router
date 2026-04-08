@@ -8,7 +8,7 @@ on:
 
 env:
   REGISTRY: docker.io
-  IMAGE_NAME: ${{ vars.DOCKERHUB_IMAGE }}
+  DOCKERHUB_IMAGE: zhoushu1/jimeng-router
   DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
   DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
 
@@ -26,10 +26,6 @@ jobs:
 
       - name: Validate image configuration
         run: |
-          if [ -z "${IMAGE_NAME}" ]; then
-            echo "Repository variable DOCKERHUB_IMAGE is required, for example <namespace>/jimeng-router." >&2
-            exit 1
-          fi
           if [ -z "${DOCKERHUB_USERNAME}" ]; then
             echo "Repository secret DOCKERHUB_USERNAME is required." >&2
             exit 1
@@ -50,7 +46,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.IMAGE_NAME }}
+          images: ${{ env.DOCKERHUB_IMAGE }}
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
             type=sha,format=short
