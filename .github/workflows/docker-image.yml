@@ -9,9 +9,6 @@ on:
 env:
   REGISTRY: docker.io
   DOCKERHUB_IMAGE: zhoushu1/jimeng-router
-  DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-  DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
-  DOCKERHUB_PASSWORD: ${{ secrets.DOCKERHUB_PASSWORD }}
 
 jobs:
   build-and-push:
@@ -24,6 +21,15 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+
+      - name: Resolve Docker Hub credentials
+        shell: bash
+        run: |
+          USERNAME='${{ secrets.DOCKER_HUB_USERNAME }}'
+          TOKEN='${{ secrets.DOCKER_HUB_TOKEN }}'
+
+          echo "DOCKERHUB_USERNAME=$USERNAME" >> "$GITHUB_ENV"
+          echo "DOCKERHUB_LOGIN_PASSWORD=$TOKEN" >> "$GITHUB_ENV"
 
       - name: Extract Docker metadata
         id: meta
@@ -39,7 +45,7 @@ jobs:
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ env.DOCKERHUB_USERNAME }}
-          password: ${{ env.DOCKERHUB_TOKEN != '' && env.DOCKERHUB_TOKEN || env.DOCKERHUB_PASSWORD }}
+          password: ${{ env.DOCKERHUB_LOGIN_PASSWORD }}
 
       - name: Build and push image
         uses: docker/build-push-action@v6
