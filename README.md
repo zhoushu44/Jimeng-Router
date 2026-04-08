@@ -2,17 +2,12 @@
 
 即梦 AI 免费 API 服务，提供 OpenAI 兼容图片/视频接口，并带一个可直接使用的控制台页面。
 
-> 本项目当前这套 Docker / Compose / README 交付内容，重点参考镜像 **`wwwzhouhui569/jimeng-free-api-all`** 整理而来，并已按你的 Docker Hub 名称改成 **`zhoushu1/jimeng-router`**。
+重点参考镜像 **`wwwzhouhui569/jimeng-free-api-all`** 
 
-本仓库当前已补齐：
-- `Dockerfile`
-- `docker-compose.yml`
-- `.github/workflows/docker-image.yml`
-- 控制台调用示例地址改为 `https://127.0.0.1`
 
 参考镜像名（重点）：`wwwzhouhui569/jimeng-free-api-all`
 
-你的 Docker Hub 可直接用：`zhoushu1/jimeng-router`
+
 
 ## 功能概览
 
