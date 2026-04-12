@@ -8,6 +8,10 @@ export interface SessionRecord {
   value: string;
   note?: string;
   createdAt: string;
+  status?: 'unknown' | 'active' | 'invalid';
+  lastSuccessAt?: string | null;
+  lastFailAt?: string | null;
+  lastError?: string | null;
 }
 
 const DATA_DIR = path.resolve(process.cwd(), 'data');
@@ -41,6 +45,27 @@ function maskSessionValue(value: string) {
   return `${value.slice(0, 4)}...${value.slice(-4)}`;
 }
 
+async function updateSessionByValue(value: string, updater: (session: SessionRecord) => SessionRecord) {
+  const normalizedValue = normalizeSessionValue(value);
+  const sessions = await readStore();
+  let changed = false;
+  const nextSessions = sessions.map((session) => {
+    if (session.value !== normalizedValue) return session;
+    changed = true;
+    return updater({
+      status: 'unknown',
+      lastSuccessAt: null,
+      lastFailAt: null,
+      lastError: null,
+      ...session,
+    });
+  });
+  if (changed) {
+    await writeStore(nextSessions);
+  }
+  return changed;
+}
+
 export async function listSessions() {
   return readStore();
 }
@@ -49,6 +74,10 @@ export async function listMaskedSessions() {
   const sessions = await readStore();
   return sessions.map(({ value, ...rest }) => ({
     ...rest,
+    status: rest.status || 'unknown',
+    lastSuccessAt: rest.lastSuccessAt ?? null,
+    lastFailAt: rest.lastFailAt ?? null,
+    lastError: rest.lastError ?? null,
     maskedValue: maskSessionValue(value),
   }));
 }
@@ -67,6 +96,10 @@ export async function addSession(input: { name?: string; value: string; note?: s
     value,
     note: input.note?.trim() || '',
     createdAt: new Date().toISOString(),
+    status: 'unknown',
+    lastSuccessAt: null,
+    lastFailAt: null,
+    lastError: null,
   };
 
   sessions.push(session);
@@ -82,6 +115,32 @@ export async function deleteSession(id: string) {
     await writeStore(nextSessions);
   }
   return deleted;
+}
+
+export async function markSessionSuccess(value: string) {
+  await updateSessionByValue(value, (session) => ({
+    ...session,
+    status: 'active',
+    lastSuccessAt: new Date().toISOString(),
+    lastError: null,
+  }));
+}
+
+export async function markSessionFailure(value: string, error: any) {
+  await updateSessionByValue(value, (session) => ({
+    ...session,
+    status: 'invalid',
+    lastFailAt: new Date().toISOString(),
+    lastError: error?.message || String(error),
+  }));
+}
+
+export async function recordSessionSuccess(value: string) {
+  await markSessionSuccess(value);
+}
+
+export async function recordSessionFailure(value: string, error: any) {
+  await markSessionFailure(value, error);
 }
 
 export async function getAuthorizationFromStore() {

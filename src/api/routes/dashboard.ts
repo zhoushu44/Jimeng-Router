@@ -1,13 +1,13 @@
 import _ from 'lodash';
 
 import Request from '@/lib/request/Request.ts';
-import { getTokenLiveStatus, getCredit } from '@/api/controllers/core.ts';
 import imagesRoute from './images.ts';
 import videosRoute from './videos.ts';
 import {
   addSession,
   deleteSession,
   getAuthorizationFromStore,
+  listMaskedSessions,
   listSessions,
 } from '@/lib/session-store.ts';
 import {
@@ -19,6 +19,7 @@ import {
   listModelsByCategory,
   moveModel as moveStoredModel,
 } from '@/lib/model-store.ts';
+import { getTokenLiveStatus, getCredit } from '@/api/controllers/core.ts';
 
 function buildExamples() {
   return {
@@ -127,12 +128,9 @@ async function getSessionApiKeyPayload() {
 }
 
 async function getSessionsPayload() {
-  const sessions = await listSessions();
+  const sessions = await listMaskedSessions();
   return {
-    sessions: sessions.map(({ value, ...rest }) => ({
-      ...rest,
-      maskedValue: value.length <= 8 ? value : `${value.slice(0, 4)}...${value.slice(-4)}`,
-    })),
+    sessions,
     count: sessions.length,
   };
 }

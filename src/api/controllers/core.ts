@@ -11,6 +11,7 @@ import EX from "@/api/consts/exceptions.ts";
 import { createParser } from "eventsource-parser";
 import logger from "@/lib/logger.ts";
 import util from "@/lib/util.ts";
+import { recordSessionFailure, recordSessionSuccess } from '@/lib/session-store.ts';
 import { signXBogus } from "@/lib/x-bogus.ts";
 import { getXGnarly } from "@/lib/x-gnarly.ts";
 
@@ -573,7 +574,39 @@ export function checkResult(result: AxiosResponse) {
  * @param authorization 认证字符串
  */
 export function tokenSplit(authorization: string) {
-  return authorization.replace("Bearer ", "").split(",");
+  return authorization.replace(/^Bearer\s+/i, '').split(',').map((token) => token.trim()).filter(Boolean);
+}
+
+function isTokenAuthError(error: any) {
+  if (error instanceof APIException && error.errcode === EX.API_TOKEN_EXPIRES) return true;
+  const status = error?.response?.status;
+  if (status === 401 || status === 403) return true;
+  const message = `${error?.message || ''} ${error?.response?.data?.errmsg || ''} ${error?.response?.data?.message || ''}`.toLowerCase();
+  return /token|sessionid|auth|authorization|expired|unauthorized|forbidden|登录|失效|过期/.test(message);
+}
+
+export async function withTokenFallback<T>(authorization: string, handler: (token: string) => Promise<T>) {
+  const tokens = _.uniq(tokenSplit(authorization));
+  if (tokens.length === 0) {
+    throw new APIException(EX.API_REQUEST_PARAMS_INVALID, 'Authorization 不能为空');
+  }
+
+  let lastError: any = null;
+  for (const token of tokens) {
+    try {
+      const result = await handler(token);
+      await recordSessionSuccess(token);
+      return result;
+    } catch (error) {
+      lastError = error;
+      if (!isTokenAuthError(error)) {
+        throw error;
+      }
+      await recordSessionFailure(token, error);
+    }
+  }
+
+  throw lastError || new APIException(EX.API_TOKEN_EXPIRES, '没有可用的 sessionid');
 }
 
 export async function acquireToken(refreshToken: string) {
