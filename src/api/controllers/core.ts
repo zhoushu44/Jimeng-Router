@@ -577,12 +577,36 @@ export function tokenSplit(authorization: string) {
   return authorization.replace(/^Bearer\s+/i, '').split(',').map((token) => token.trim()).filter(Boolean);
 }
 
+function collectErrorText(error: any) {
+  const parts = [
+    error?.message,
+    error?.errmsg,
+    error?.error?.message,
+    error?.response?.data?.errmsg,
+    error?.response?.data?.message,
+    error?.response?.data?.error,
+    error?.data?.errmsg,
+    error?.data?.message,
+    error?.data?.error,
+    error?.response?.data,
+    error?.data,
+  ]
+    .flatMap((value) => (typeof value === 'string' ? [value] : []));
+
+  return parts.join(' ').toLowerCase();
+}
+
 function isTokenAuthError(error: any) {
   if (error instanceof APIException && error.errcode === EX.API_TOKEN_EXPIRES) return true;
+
+  const message = collectErrorText(error);
+  const authMessage = /check\s*login|login\s*error|not\s*login|sessionid|unauthorized|请登录|未登录|登录失效/.test(message);
   const status = error?.response?.status;
-  if (status === 401 || status === 403) return true;
-  const message = `${error?.message || ''} ${error?.response?.data?.errmsg || ''} ${error?.response?.data?.message || ''}`.toLowerCase();
-  return /token|sessionid|auth|authorization|expired|unauthorized|forbidden|登录|失效|过期/.test(message);
+
+  if (status === 401) return true;
+  if (status === 403) return authMessage;
+
+  return authMessage;
 }
 
 export async function withTokenFallback<T>(authorization: string, handler: (token: string) => Promise<T>) {
@@ -602,6 +626,7 @@ export async function withTokenFallback<T>(authorization: string, handler: (toke
       if (!isTokenAuthError(error)) {
         throw error;
       }
+      logger.warn(`Token 失效，切换到下一个可用 token: ${String(error?.message || error)}`);
       await recordSessionFailure(token, error);
     }
   }
