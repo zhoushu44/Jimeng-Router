@@ -1,6 +1,10 @@
 {
   "sessions": [
     {
+      "status": "active",
+      "lastSuccessAt": "2026-04-14T04:12:06.353Z",
+      "lastFailAt": null,
+      "lastError": null,
       "id": "7d52800032ee11f19bcab72782cb7c25",
       "name": "1",
       "value": "17def81a296db7a194537de5cac80365",

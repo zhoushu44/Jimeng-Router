@@ -726,7 +726,7 @@
           <h1>Session 驱动的<br />即梦控制台</h1>
           <div class="headline-note">
             <span class="chip">多 sessionid 轮换</span>
-            <span class="chip">服务端持久化</span>
+            <span class="chip">Cookie 自动提取</span>
             <span class="chip">文生图 / 图生图 / 视频</span>
             <span class="chip">OpenAI 兼容接口不变</span>
           </div>
@@ -735,7 +735,7 @@
           <div class="stat">
             <div class="stat-label">Session 库</div>
             <div class="stat-value" id="statSessions">0</div>
-            <div class="stat-sub" id="statSessionsSub">还没有保存 sessionid</div>
+            <div class="stat-sub" id="statSessionsSub">还没有保存 sessionid 或 Cookie</div>
           </div>
           <div class="stat">
             <div class="stat-label">模型清单</div>
@@ -770,7 +770,7 @@
           <div class="card-header">
             <div>
               <h2 class="card-title">添加 Session</h2>
-              <p class="card-desc">把 sessionid 持久化到服务端。控制台生成时会自动从已保存的 session 中拼接 Authorization 并复用现有轮换逻辑。</p>
+              <p class="card-desc">把完整 Cookie 或 sessionid 持久化到服务端。控制台生成时会自动从 Cookie 中提取 sessionid，并由服务端按 session 池自动轮换使用；OpenAI 客户端里的 API KEY 随便填就行。</p>
             </div>
             <div class="badge">POST /api/sessions</div>
           </div>
@@ -785,15 +785,13 @@
                 <input id="sessionNote" name="note" placeholder="可选，记录来源或用途" />
               </div>
               <div class="field">
-                <label for="sessionValue">sessionid</label>
-                <textarea id="sessionValue" name="value" placeholder="支持直接粘贴 sessionid，也可粘贴 Bearer xxx，服务端会自动规范化。" required></textarea>
-                <div class="hint">保存后列表中只显示掩码值，真实值仅保留在服务端 data/sessions.json。</div>
+                <label for="sessionValue">Cookie / sessionid</label>
+                <textarea id="sessionValue" name="value" placeholder="支持直接粘贴完整 Cookie，服务端会自动提取 sessionid；也可直接粘贴 sessionid 或 Bearer xxx。" required></textarea>
               </div>
             </div>
             <div class="actions">
               <button class="btn btn-primary" type="submit" id="sessionSubmit">保存 Session</button>
               <button class="btn btn-secondary" type="button" id="sessionRefresh">刷新列表</button>
-              <button class="btn btn-secondary" type="button" id="copyApiKey">复制 API KEY</button>
             </div>
           </form>
         </article>
@@ -806,9 +804,9 @@
             </div>
             <div class="badge" id="sessionCountBadge">0 条记录</div>
           </div>
-          <div class="notice" id="sessionApiKeyHint">复制出来的 API KEY 就是多个 sessionid 的逗号拼接结果，可直接填进 OpenAI 兼容客户端的 API KEY。</div>
+          <div class="notice" id="sessionApiKeyHint">OpenAI 兼容客户端里的 API KEY 可以随便填，服务端会直接使用已保存的 session 池自动轮换，不需要复制额外的 Key。</div>
           <div id="sessionList" class="table-list">
-            <div class="empty">还没有 sessionid。<br />先在左侧添加一条，再使用图片或视频生成表单。</div>
+            <div class="empty">还没有 sessionid。<br />先在左侧添加一条，或直接粘贴 Cookie，再使用图片或视频生成表单。</div>
           </div>
         </article>
       </div>
@@ -886,7 +884,7 @@
           <div class="card-header">
             <div>
               <h2 class="card-title">图片生成</h2>
-              <p class="card-desc">无 images 时走文生图；填写 URL 数组或上传文件时自动走图生图。控制台会请求 /api/generate/image，并由后端注入已保存的 sessionid。</p>
+              <p class="card-desc">无 images 时走文生图；填写 URL 数组或上传文件时自动走图生图。控制台会请求 /api/generate/image，并由后端注入已保存的 sessionid，或从 Cookie 提取的 sessionid 进入轮换池。</p>
             </div>
             <div class="badge">POST /api/generate/image</div>
           </div>
@@ -1068,7 +1066,7 @@
         <div class="card-header">
           <div>
             <h2 class="card-title">调用说明与示例</h2>
-            <p class="card-desc">内容来自 /api/examples。示例中的认证方式统一为 Bearer sessionid；控制台模式下则自动使用已保存 session，无需你每次手写 Authorization。</p>
+            <p class="card-desc">内容来自 /api/examples。示例中的 API KEY 可以任意填写；控制台模式下则自动使用已保存 session 池，无需你每次手写有效 sessionid。也支持把 Cookie 中的 sessionid 自动提取后保存。</p>
           </div>
           <div class="badge">GET /api/examples</div>
         </div>
@@ -1082,7 +1080,7 @@
               <option value="models">模型接口</option>
             </select>
           </div>
-          <div class="example-meta-note">可以单独切换查看文生图、视频、模型列表等示例；同时展示 Python、cURL，以及兼容 OpenAI 客户端常见填写方式的 URL / API KEY / MODEL 配置。</div>
+          <div class="example-meta-note">可以单独切换查看文生图、视频、模型列表等示例；同时展示 Python、cURL，以及兼容 OpenAI 客户端常见填写方式的 URL / API KEY / MODEL 配置。这里的 API KEY 只是示例占位，Cookie 中的 sessionid 也可以直接粘贴到控制台自动提取。</div>
         </div>
         <div id="examplesContent" class="example-list">
           <div class="empty">正在加载示例说明。</div>
@@ -1178,48 +1176,16 @@
       return data;
     }
 
-    async function copyText(text) {
-      const value = String(text || '');
-
-      try {
-        if (navigator.clipboard?.writeText && window.isSecureContext) {
-          await navigator.clipboard.writeText(value);
-          return true;
-        }
-      } catch {}
-
-      try {
-        const input = document.createElement('textarea');
-        input.value = value;
-        input.setAttribute('readonly', 'readonly');
-        input.style.position = 'fixed';
-        input.style.top = '0';
-        input.style.left = '-9999px';
-        input.style.opacity = '0';
-        document.body.appendChild(input);
-        input.focus();
-        input.select();
-        input.setSelectionRange(0, input.value.length);
-        const copied = document.execCommand('copy');
-        document.body.removeChild(input);
-        if (copied) {
-          return true;
-        }
-      } catch {}
-
-      window.prompt('当前环境不支持自动写入剪贴板，请手动复制下面的 API KEY：', value);
-      return false;
-    }
 
     function renderSessions() {
       const list = document.getElementById('sessionList');
       const count = state.sessions.length;
       document.getElementById('sessionCountBadge').textContent = `${count} 条记录`;
       document.getElementById('statSessions').textContent = String(count);
-      document.getElementById('statSessionsSub').textContent = count > 0 ? '控制台生成将自动注入这些 session' : '还没有保存 sessionid';
+      document.getElementById('statSessionsSub').textContent = count > 0 ? '控制台生成将自动轮换这些 session，或从你粘贴的 Cookie 中提取 sessionid' : '还没有保存 sessionid 或 Cookie';
 
       if (!count) {
-        list.innerHTML = '<div class="empty">还没有 sessionid。<br />先在左侧添加一条，再使用图片或视频生成表单。</div>';
+        list.innerHTML = '<div class="empty">还没有 sessionid。<br />先在左侧添加一条，或直接粘贴 Cookie，再使用图片或视频生成表单。</div>';
         return;
       }
 
@@ -1627,25 +1593,6 @@ MODEL: ${escapeHtml(item.openai.model || '')}</pre></div>
       }
     });
 
-    document.getElementById('copyApiKey').addEventListener('click', async () => {
-      const button = document.getElementById('copyApiKey');
-      setLoading(button, true, '刷新并复制中');
-      try {
-        await loadSessions();
-        const data = await requestJson('/api/sessions/api-key');
-        const copied = await copyText(data.api_key || '');
-        const sessionCount = Array.isArray(state.sessions) ? state.sessions.length : (data.count ?? 0);
-        if (copied) {
-          showToast(`API KEY 已刷新并复制（共 ${sessionCount} 个 session）`);
-        } else {
-          showToast(`当前环境不支持自动复制，已弹出手动复制框（共 ${sessionCount} 个 session）`, 'error');
-        }
-      } catch (error) {
-        showToast(error.message || '复制失败', 'error');
-      } finally {
-        setLoading(button, false);
-      }
-    });
 
     document.getElementById('imageReset').addEventListener('click', () => {
       document.getElementById('imageForm').reset();

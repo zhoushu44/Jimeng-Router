@@ -37,7 +37,12 @@ async function writeStore(sessions: SessionRecord[]) {
 }
 
 function normalizeSessionValue(value: string) {
-  return value.trim().replace(/^Bearer\s+/i, '');
+  const trimmed = value.trim().replace(/^Bearer\s+/i, '');
+  const cookieMatch = trimmed.match(/(?:^|;\s*)sessionid=([^;]+)/i);
+  if (cookieMatch) {
+    return decodeURIComponent(cookieMatch[1].trim());
+  }
+  return trimmed;
 }
 
 function maskSessionValue(value: string) {
@@ -148,7 +153,7 @@ export async function getAuthorizationFromStore() {
   if (sessions.length === 0) {
     throw new Error('当前没有可用的 sessionid，请先在 Session 管理中添加。');
   }
-  return `Bearer ${sessions.map((session) => session.value).join(',')}`;
+  return 'Bearer jimeng-router';
 }
 
 export async function getSessionById(id: string) {

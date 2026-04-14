@@ -11,7 +11,7 @@ import EX from "@/api/consts/exceptions.ts";
 import { createParser } from "eventsource-parser";
 import logger from "@/lib/logger.ts";
 import util from "@/lib/util.ts";
-import { recordSessionFailure, recordSessionSuccess } from '@/lib/session-store.ts';
+import { recordSessionFailure, recordSessionSuccess, listSessions } from '@/lib/session-store.ts';
 import { signXBogus } from "@/lib/x-bogus.ts";
 import { getXGnarly } from "@/lib/x-gnarly.ts";
 
@@ -610,7 +610,11 @@ function isTokenAuthError(error: any) {
 }
 
 export async function withTokenFallback<T>(authorization: string, handler: (token: string) => Promise<T>) {
-  const tokens = _.uniq(tokenSplit(authorization));
+  const storedSessions = await listSessions();
+  const storedTokens = _.uniq(storedSessions.map((session) => session.value).filter(Boolean));
+  const fallbackTokens = _.uniq(tokenSplit(authorization));
+  const tokens = storedTokens.length > 0 ? storedTokens : fallbackTokens;
+
   if (tokens.length === 0) {
     throw new APIException(EX.API_REQUEST_PARAMS_INVALID, 'Authorization 不能为空');
   }

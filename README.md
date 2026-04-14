@@ -1,6 +1,6 @@
 # Jimeng-Router
 
-即梦 AI 免费 API 服务，提供 OpenAI 兼容图片/视频接口，并带一个可直接使用的控制台页面。
+即梦 AI 免费 API 服务，提供 OpenAI 兼容图片/视频接口，并带一个可直接使用的控制台页面。控制台支持直接粘贴完整 Cookie，服务端会自动提取 sessionid。
 
 重点参考镜像 **`wwwzhouhui569/jimeng-free-api-all`** 
 
@@ -117,24 +117,17 @@ ports:
   - "0.0.0.0:5200:5200"
 ```
 
-## Docker Hub 发布示例
+## Docker Hub 自动发布
+
+仓库已配置 GitHub Actions，会在推送到 `master` 时自动构建并推送同一个镜像标签：
+
+- `1.3`
+- `latest`
 
 ### 推荐镜像名
 
 ```text
 zhoushu1/jimeng-router
-```
-
-### 手动打 tag
-
-```bash
-docker tag jimeng-router:latest zhoushu1/jimeng-router:latest
-```
-
-### 推送
-
-```bash
-docker push zhoushu1/jimeng-router:latest
 ```
 
 ### 拉取运行
@@ -168,9 +161,9 @@ http://127.0.0.1:5200/
 在 `Session 管理` 页填写：
 - 名称
 - 备注
-- `sessionid`
+- `sessionid` 或完整 Cookie
 
-保存后，控制台会自动把 session 持久化到服务端的 `data/sessions.json`。
+保存后，控制台会自动把 session 持久化到服务端的 `data/sessions.json`，并从 Cookie 中提取 `sessionid`；OpenAI 兼容客户端里的 API KEY 可以随便填，真正的 session 轮换由服务端处理。
 
 ### 3. 图片生成
 
@@ -210,6 +203,7 @@ POST /api/generate/video
 - cURL 示例
 - Python 示例
 - OpenAI 客户端参数示例
+- 支持直接粘贴 Cookie / sessionid 的说明
 
 当前示例基址已改为：
 
@@ -218,6 +212,8 @@ https://127.0.0.1/v1
 ```
 
 ## OpenAI 兼容调用示例
+
+示例里的 `Authorization: Bearer any-value` 只是占位；客户端可以填写任意 API KEY，服务端会直接使用已保存的 session 池自动轮换。
 
 ### 查看模型
 
@@ -230,7 +226,7 @@ curl http://127.0.0.1:5200/v1/models
 ```bash
 curl -X POST http://127.0.0.1:5200/v1/images/generations \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer your_sessionid" \
+  -H "Authorization: Bearer any-value" \
   -d '{"model":"jimeng-5.0","prompt":"霓虹雨夜中的未来城市","ratio":"16:9","resolution":"2k"}'
 ```
 
@@ -239,7 +235,7 @@ curl -X POST http://127.0.0.1:5200/v1/images/generations \
 ```bash
 curl -X POST http://127.0.0.1:5200/v1/videos/generations \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer your_sessionid" \
+  -H "Authorization: Bearer any-value" \
   -d '{"model":"jimeng-video-3.5-pro","prompt":"海边奔跑的白色小狗，电影镜头","ratio":"16:9","resolution":"720p","duration":5}'
 ```
 
@@ -274,8 +270,8 @@ zhoushu1/jimeng-router
 - 登录 Docker Hub
 - 用根目录 `Dockerfile` 构建镜像
 - 推送：
+  - `1.3`
   - `latest`
-  - `sha-短提交号`
 
 ## 项目目录
 
