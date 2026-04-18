@@ -1,7 +1,6 @@
-FROM node:20-bookworm-slim AS base
+FROM node:20-alpine AS base
 
-ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright \
-    NODE_ENV=production \
+ENV NODE_ENV=production \
     SERVER_ENV=dev \
     SERVER_HOST=0.0.0.0 \
     SERVER_PORT=5200
@@ -22,27 +21,20 @@ RUN npm run build
 
 FROM base AS runtime
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    libnss3 \
-    libatk1.0-0 \
-    libatk-bridge2.0-0 \
-    libcups2 \
-    libdrm2 \
-    libxkbcommon0 \
-    libxcomposite1 \
-    libxdamage1 \
-    libxfixes3 \
-    libxrandr2 \
-    libgbm1 \
-    libpango-1.0-0 \
-    libcairo2 \
-    libasound2 \
-    libatspi2.0-0 \
-    libwayland-client0 \
-    && rm -rf /var/lib/apt/lists/*
+RUN apk add --no-cache \
+    chromium \
+    nss \
+    freetype \
+    harfbuzz \
+    ca-certificates \
+    ttf-freefont \
+    && rm -rf /var/cache/apk/*
+
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+ENV PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium-browser
 
 COPY package.json package-lock.json ./
-RUN npm ci --omit=dev && npx playwright-core install chromium
+RUN npm ci --omit=dev
 
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/public ./public
